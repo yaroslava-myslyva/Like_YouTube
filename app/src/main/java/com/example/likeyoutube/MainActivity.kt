@@ -8,30 +8,32 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.ViewGroup
 import android.widget.*
+import androidx.annotation.NonNull
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
-import androidx.navigation.findNavController
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.setupActionBarWithNavController
-import androidx.navigation.ui.setupWithNavController
 import com.example.likeyoutube.databinding.ActivityMainBinding
 import com.example.likeyoutube.fragment.ExploreFragment
 import com.example.likeyoutube.fragment.HomeFragment
 import com.example.likeyoutube.fragment.LibraryFragment
 import com.example.likeyoutube.fragment.SubscriptionsFragment
+import com.google.android.gms.auth.api.Auth
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.GoogleApiClient
+import com.google.android.gms.tasks.OnCompleteListener
+import com.google.android.gms.tasks.Task
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.GetTokenResult
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.database.FirebaseDatabase
-import java.lang.Exception
 import java.util.*
-import kotlin.collections.HashMap
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -43,6 +45,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var userprofile_image: ImageView
 
     private lateinit var mGoogleSignInClient: GoogleSignInClient
+    private lateinit var mGoogleApiClient: GoogleApiClient
     private val RC_SIGN_IN = 100
 
     private lateinit var auth: FirebaseAuth
@@ -54,24 +57,46 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+
         toolbar = binding.toolbar
         setSupportActionBar(toolbar)
 
-        supportActionBar?.setTitle("")
+        supportActionBar?.title = ""
 
         bottomNavigationView = binding.bottomNavigation
         frameLayout = binding.frameLayout
 
         auth = FirebaseAuth.getInstance()
-        val user = auth.currentUser
+        auth.signInWithEmailAndPassword("", "")
+            .addOnCompleteListener(
+                this
+            ) { task ->
+                if (task.isSuccessful) {
+                    Log.d("ttt", "signInWithEmail:success")
+                    val user: FirebaseUser? = auth.currentUser
+                    val task: Task<GetTokenResult>? = user?.getIdToken(true)
+                    task?.addOnCompleteListener {
+                        Log.d("ttt", "token ${task.result?.token}")
+                    }
+                } else {
+                    Log.w("ttt", "signInWithEmail:failure", task.exception)
+                }
+            }
+//        val user = auth.currentUser
+//
+//        userprofile_image = binding.userProfileImage
+//
+//        val gsc = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+//             .requestServerAuthCode("812820590609-d6cgvde2vfkolhtf0cd5svpr5t7rvgt2.apps.googleusercontent.com")
+//            .requestEmail()
+//            .build()
+//
+//        mGoogleApiClient = GoogleApiClient.Builder(this)
+//            .enableAutoManage(this /* FragmentActivity */, this /* OnConnectionFailedListener */)
+//            .addApi<GoogleSignInOptions>(Auth.GOOGLE_SIGN_IN_API, gsc)
+//            .build()
+        //   mGoogleSignInClient = GoogleSignIn.getClient(this, gsc)
 
-        userprofile_image = binding.userProfileImage
-
-        val gsc = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestServerAuthCode("812820590609-digu3ln7t2ue7p3o5835du2lo5hq7kre.apps.googleusercontent.com")
-            .requestEmail()
-            .build()
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gsc)
 
         bottomNavigationView.setOnNavigationItemSelectedListener {
             when (it.itemId) {
@@ -105,14 +130,14 @@ class MainActivity : AppCompatActivity() {
 
         bottomNavigationView.selectedItemId = R.id.home
 
-        userprofile_image.setOnClickListener {
-            if (user != null) {
-                Toast.makeText(this, "User Already Sign In", Toast.LENGTH_SHORT).show()
-            } else {
-                showDialogue()
-            }
+//        userprofile_image.setOnClickListener {
+//            if (user != null) {
+//                Toast.makeText(this, "User Already Sign In", Toast.LENGTH_SHORT).show()
+//            } else {
+//                showDialogue()
+//            }
 
-        }
+        //       }
     }
 
     private fun showDialogue() {
@@ -132,8 +157,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun signIn() {
-        mGoogleSignInClient.signOut()
-        val intent = mGoogleSignInClient.signInIntent
+//        mGoogleSignInClient.signOut()
+//        val intent = mGoogleSignInClient.signInIntent
+        val intent = Auth.GoogleSignInApi.getSignInIntent(mGoogleApiClient)
         startActivityForResult(intent, RC_SIGN_IN)
     }
 
@@ -196,5 +222,5 @@ class MainActivity : AppCompatActivity() {
         }
         return false
     }
-
 }
+
