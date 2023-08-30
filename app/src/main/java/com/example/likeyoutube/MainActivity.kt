@@ -8,7 +8,6 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.ViewGroup
 import android.widget.*
-import androidx.annotation.NonNull
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
@@ -20,22 +19,21 @@ import com.example.likeyoutube.fragment.SubscriptionsFragment
 import com.google.android.gms.auth.api.Auth
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.GoogleApiClient
-import com.google.android.gms.tasks.OnCompleteListener
-import com.google.android.gms.tasks.Task
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.google.firebase.auth.AuthResult
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
+import com.google.api.services.youtube.YouTubeScopes
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.GetTokenResult
-import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.database.FirebaseDatabase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 import java.util.*
 
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), GoogleApiClient.OnConnectionFailedListener {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var toolbar: androidx.appcompat.widget.Toolbar
@@ -67,36 +65,7 @@ class MainActivity : AppCompatActivity() {
         frameLayout = binding.frameLayout
 
         auth = FirebaseAuth.getInstance()
-        auth.signInWithEmailAndPassword("", "")
-            .addOnCompleteListener(
-                this
-            ) { task ->
-                if (task.isSuccessful) {
-                    Log.d("ttt", "signInWithEmail:success")
-                    val user: FirebaseUser? = auth.currentUser
-                    val task: Task<GetTokenResult>? = user?.getIdToken(true)
-                    task?.addOnCompleteListener {
-                        Log.d("ttt", "token ${task.result?.token}")
-                    }
-                } else {
-                    Log.w("ttt", "signInWithEmail:failure", task.exception)
-                }
-            }
-//        val user = auth.currentUser
-//
-//        userprofile_image = binding.userProfileImage
-//
-//        val gsc = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-//             .requestServerAuthCode("812820590609-d6cgvde2vfkolhtf0cd5svpr5t7rvgt2.apps.googleusercontent.com")
-//            .requestEmail()
-//            .build()
-//
-//        mGoogleApiClient = GoogleApiClient.Builder(this)
-//            .enableAutoManage(this /* FragmentActivity */, this /* OnConnectionFailedListener */)
-//            .addApi<GoogleSignInOptions>(Auth.GOOGLE_SIGN_IN_API, gsc)
-//            .build()
-        //   mGoogleSignInClient = GoogleSignIn.getClient(this, gsc)
-
+        signIn()
 
         bottomNavigationView.setOnNavigationItemSelectedListener {
             when (it.itemId) {
@@ -130,35 +99,35 @@ class MainActivity : AppCompatActivity() {
 
         bottomNavigationView.selectedItemId = R.id.home
 
-//        userprofile_image.setOnClickListener {
-//            if (user != null) {
-//                Toast.makeText(this, "User Already Sign In", Toast.LENGTH_SHORT).show()
-//            } else {
-//                showDialogue()
-//            }
-
-        //       }
     }
 
-    private fun showDialogue() {
-        val builder = AlertDialog.Builder(this)
-        builder.setCancelable(true)
-
-        val viewGroup = findViewById<ViewGroup>(android.R.id.content)
-        val view = LayoutInflater.from(applicationContext)
-            .inflate(R.layout.item_signin_dialogue, viewGroup, false)
-
-        builder.setView(view)
-        val txt_google_signIn = view.findViewById<TextView>(R.id.txt_google_signIn)
-        txt_google_signIn.setOnClickListener {
-            signIn()
-        }
-        builder.create().show()
-    }
+//    private fun showDialogue() {
+//        val builder = AlertDialog.Builder(this)
+//        builder.setCancelable(true)
+//
+//        val viewGroup = findViewById<ViewGroup>(android.R.id.content)
+//        val view = LayoutInflater.from(applicationContext)
+//            .inflate(R.layout.item_signin_dialogue, viewGroup, false)
+//
+//        builder.setView(view)
+//        val txt_google_signIn = view.findViewById<TextView>(R.id.txt_google_signIn)
+//        txt_google_signIn.setOnClickListener {
+//            signIn()
+//        }
+//        builder.create().show()
+//    }
 
     private fun signIn() {
-//        mGoogleSignInClient.signOut()
-//        val intent = mGoogleSignInClient.signInIntent
+        val gsc = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken("812820590609-d6cgvde2vfkolhtf0cd5svpr5t7rvgt2.apps.googleusercontent.com")
+            .requestEmail()
+            .build()
+
+        mGoogleApiClient = GoogleApiClient.Builder(this)
+            .enableAutoManage(this /* FragmentActivity */, this /* OnConnectionFailedListener */)
+            .addApi<GoogleSignInOptions>(Auth.GOOGLE_SIGN_IN_API, gsc)
+            .build()
+        mGoogleSignInClient = GoogleSignIn.getClient(this, gsc)
         val intent = Auth.GoogleSignInApi.getSignInIntent(mGoogleApiClient)
         startActivityForResult(intent, RC_SIGN_IN)
     }
@@ -171,28 +140,21 @@ class MainActivity : AppCompatActivity() {
             try {
                 val account = task.getResult(ApiException::class.java)
                 Log.d("ttt", "email - ${account.email}")
+                Log.d("ttt", "token - ${account.idToken}")
 
-                val credential = GoogleAuthProvider.getCredential(account.idToken, null)
-                auth.signInWithCredential(credential).addOnCompleteListener {
-                    if (task.isSuccessful) {
-                        val firebaseUser = FirebaseAuth.getInstance().currentUser
+                val credential: GoogleAccountCredential = GoogleAccountCredential
+                    .usingOAuth2(this, Collections.singleton(YouTubeScopes.YOUTUBE_READONLY))
+                    .setSelectedAccountName(account.email)
+                val youTubeApiClient = YouTubeApiClient(credential, this)
 
-                        val map = HashMap<String, Any?>()
-                        map.put("username", account.displayName)
-                        map.put("email", account.email)
-                        map.put("profile", account.photoUrl)
-                        map.put("uid", firebaseUser?.uid)
-                        map.put("search", account.displayName?.toLowerCase())
-
-                        val reference = FirebaseDatabase.getInstance().getReference().child("Users")
-                        firebaseUser?.uid?.let { it -> reference.child(it).setValue(map) }
-                    } else {
-                        Toast.makeText(this, task.exception?.message, Toast.LENGTH_SHORT).show()
-
-                    }
+                MainScope().launch(Dispatchers.IO) {
+                    val list = youTubeApiClient.getPlaylists()
+                    Log.d("ttt", "list - $list")
                 }
+
             } catch (e: Exception) {
-                Toast.makeText(this, e.message, Toast.LENGTH_SHORT).show()
+                Log.d("ttt", "exception - ${e.message}")
+
             }
         }
     }
@@ -221,6 +183,10 @@ class MainActivity : AppCompatActivity() {
             else -> super.onOptionsItemSelected(item)
         }
         return false
+    }
+
+    override fun onConnectionFailed(p0: ConnectionResult) {
+        TODO("Not yet implemented")
     }
 }
 
