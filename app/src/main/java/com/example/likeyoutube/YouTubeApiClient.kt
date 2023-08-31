@@ -2,6 +2,7 @@ package com.example.likeyoutube
 
 import android.content.Context
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
+import com.google.api.client.http.HttpRequestInitializer
 import com.google.api.client.http.HttpTransport
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
@@ -9,7 +10,7 @@ import com.google.api.services.youtube.YouTube
 import com.google.api.services.youtube.model.Playlist
 import com.google.api.services.youtube.model.PlaylistListResponse
 
-class YouTubeApiClient(credential: GoogleAccountCredential?, context: Context) {
+class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
     private var mYouTube: YouTube
 
     init {

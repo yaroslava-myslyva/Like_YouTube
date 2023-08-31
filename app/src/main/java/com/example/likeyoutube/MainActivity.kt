@@ -24,12 +24,22 @@ import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
+import com.google.api.client.auth.oauth2.Credential
+import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp
+import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver
+import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow
+import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets
+import com.google.api.client.http.javanet.NetHttpTransport
+import com.google.api.client.json.gson.GsonFactory
+import com.google.api.client.util.store.MemoryDataStoreFactory
 import com.google.api.services.youtube.YouTubeScopes
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import okio.IOException
+import java.io.InputStream
+import java.io.InputStreamReader
 import java.util.*
 
 
@@ -45,6 +55,7 @@ class MainActivity : AppCompatActivity(), GoogleApiClient.OnConnectionFailedList
     private lateinit var mGoogleSignInClient: GoogleSignInClient
     private lateinit var mGoogleApiClient: GoogleApiClient
     private val RC_SIGN_IN = 100
+    private val REQUEST_AUTHORIZATION = 101
 
     private lateinit var auth: FirebaseAuth
 //    private lateinit var user : FirebaseUser
@@ -65,7 +76,7 @@ class MainActivity : AppCompatActivity(), GoogleApiClient.OnConnectionFailedList
         frameLayout = binding.frameLayout
 
         auth = FirebaseAuth.getInstance()
-        signIn()
+
 
         bottomNavigationView.setOnNavigationItemSelectedListener {
             when (it.itemId) {
@@ -99,25 +110,54 @@ class MainActivity : AppCompatActivity(), GoogleApiClient.OnConnectionFailedList
 
         bottomNavigationView.selectedItemId = R.id.home
 
+        binding.icon.setOnClickListener {
+            showDialogue()
+        }
     }
 
-//    private fun showDialogue() {
-//        val builder = AlertDialog.Builder(this)
-//        builder.setCancelable(true)
-//
-//        val viewGroup = findViewById<ViewGroup>(android.R.id.content)
-//        val view = LayoutInflater.from(applicationContext)
-//            .inflate(R.layout.item_signin_dialogue, viewGroup, false)
-//
-//        builder.setView(view)
-//        val txt_google_signIn = view.findViewById<TextView>(R.id.txt_google_signIn)
-//        txt_google_signIn.setOnClickListener {
-//            signIn()
-//        }
-//        builder.create().show()
-//    }
+    private fun showDialogue() {
+        val builder = AlertDialog.Builder(this)
+        builder.setCancelable(true)
+
+        val viewGroup = findViewById<ViewGroup>(android.R.id.content)
+        val view = LayoutInflater.from(applicationContext)
+            .inflate(R.layout.item_signin_dialogue, viewGroup, false)
+
+        builder.setView(view)
+        val txt_google_signIn = view.findViewById<TextView>(R.id.txt_google_signIn)
+        txt_google_signIn.setOnClickListener {
+            signIn()
+        }
+        builder.create().show()
+    }
+
+    @Throws(IOException::class)
+    fun authorize(userID :String): Credential? {
+        // Load client secrets.
+        val `in`: InputStream = getAssets().open("client_secret.json")
+        Log.d("ttt", "in")
+        Log.d("ttt", "GsonFactory - ${GsonFactory.getDefaultInstance()}")
+        Log.d("ttt", "InputStreamReader - ${InputStreamReader(`in`)}")
+        val clientSecrets =
+            GoogleClientSecrets.load(GsonFactory.getDefaultInstance(), InputStreamReader(`in`))
+        Log.d("ttt", "clientSecrets")
+        // Build flow and trigger user authorization request.
+        val flow = GoogleAuthorizationCodeFlow.Builder(
+            NetHttpTransport(), GsonFactory.getDefaultInstance(), clientSecrets, Collections.singleton(YouTubeScopes.YOUTUBE)
+        )
+            .setDataStoreFactory(MemoryDataStoreFactory())
+            .setAccessType("offline")
+            .build()
+        Log.d("ttt", "flow")
+        return flow.loadCredential(userID)
+//         AuthorizationCodeInstalledApp(
+//            flow, LocalServerReceiver()
+//        ).authorize(userID)
+    }
+
 
     private fun signIn() {
+
         val gsc = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken("812820590609-d6cgvde2vfkolhtf0cd5svpr5t7rvgt2.apps.googleusercontent.com")
             .requestEmail()
@@ -128,6 +168,18 @@ class MainActivity : AppCompatActivity(), GoogleApiClient.OnConnectionFailedList
             .addApi<GoogleSignInOptions>(Auth.GOOGLE_SIGN_IN_API, gsc)
             .build()
         mGoogleSignInClient = GoogleSignIn.getClient(this, gsc)
+        mGoogleSignInClient.signOut()
+//        val signInRequest = BeginSignInRequest.builder()
+//            .setGoogleIdTokenRequestOptions(
+//                BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
+//                    .setSupported(true)
+//                    // Your server's client ID, not your Android client ID.
+//                    .setServerClientId("812820590609-d6cgvde2vfkolhtf0cd5svpr5t7rvgt2.apps.googleusercontent.com")
+//                    // Only show accounts previously used to sign in.
+//                    //.setFilterByAuthorizedAccounts(true)
+//                    .build())
+//            .build()
+
         val intent = Auth.GoogleSignInApi.getSignInIntent(mGoogleApiClient)
         startActivityForResult(intent, RC_SIGN_IN)
     }
@@ -141,20 +193,37 @@ class MainActivity : AppCompatActivity(), GoogleApiClient.OnConnectionFailedList
                 val account = task.getResult(ApiException::class.java)
                 Log.d("ttt", "email - ${account.email}")
                 Log.d("ttt", "token - ${account.idToken}")
+                Log.d("ttt", "id - ${account.id}")
+               //
+                val credential :Credential?= account.id?.let { authorize(it) }
+                Log.d("ttt", "credential - $credential")
+//                val credential: GoogleAccountCredential = GoogleAccountCredential
+//                    .usingOAuth2(this, Collections.singleton(YouTubeScopes.YOUTUBE))
+//                    .setSelectedAccountName(account.email)
 
-                val credential: GoogleAccountCredential = GoogleAccountCredential
-                    .usingOAuth2(this, Collections.singleton(YouTubeScopes.YOUTUBE_READONLY))
-                    .setSelectedAccountName(account.email)
-                val youTubeApiClient = YouTubeApiClient(credential, this)
+//                 val credential2: GoogleCredentials = GoogleCredentials.create()
+//                    .createScoped(Collections.singleton(YouTubeScopes.YOUTUBE_READONLY))
+
+//                 val requestInitializer : HttpRequestInitializer = HttpRequestInitializer{ request ->
+//                     HttpCredentialsAdapter(credential2).initialize(request)
+//                     request.setConnectTimeout(60000) // 1 minute connect timeout
+//                     request.setReadTimeout(60000) // 1 minute read timeout
+//                 }
 
                 MainScope().launch(Dispatchers.IO) {
-                    val list = youTubeApiClient.getPlaylists()
-                    Log.d("ttt", "list - $list")
+                   // Log.d("ttt", "scope - ${credential.scope}")
+                        Log.d("ttt", "access token - ${credential?.accessToken}")
+                   val youTubeApiClient =
+                       credential?.requestInitializer?.let { YouTubeApiClient(it, this@MainActivity) }
+                    val list = youTubeApiClient?.getPlaylists()
+                   Log.d("ttt", "list - $list")
                 }
 
             } catch (e: Exception) {
-                Log.d("ttt", "exception - ${e.message}")
-
+//                if (e is UserRecoverableAuthIOException) {
+//                    this.startActivityForResult(e.getIntent(), this.REQUEST_AUTHORIZATION);
+//                }
+                Log.d("ttt", "exception - ${e.message}, ${e.stackTrace} ${e.javaClass}")
             }
         }
     }
