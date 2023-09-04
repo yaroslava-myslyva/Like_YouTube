@@ -15,6 +15,10 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        manifestPlaceholders = [
+                appAuthRedirectScheme: 'com.example.likeyoutube'
+        ]
     }
     packagingOptions {
         exclude("META-INF/DEPENDENCIES")
@@ -74,5 +78,8 @@ dependencies {
     implementation 'com.google.android.gms:play-services-auth:20.6.0'
     implementation 'com.google.api-client:google-api-client-android:2.2.0'
     implementation 'com.google.apis:google-api-services-youtube:v3-rev222-1.25.0'
+
+    implementation 'net.openid:appauth:0.9.1'
+    implementation 'com.auth0.android:jwtdecode:2.0.0'
 
 }
