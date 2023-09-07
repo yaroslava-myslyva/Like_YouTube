@@ -21,8 +21,10 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.Scopes
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.GoogleApiClient
+import com.google.android.gms.common.api.Scope
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.api.client.auth.oauth2.Credential
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp
@@ -132,57 +134,23 @@ class MainActivity : AppCompatActivity(), GoogleApiClient.OnConnectionFailedList
         builder.create().show()
     }
 
-    @Throws(IOException::class)
-    fun authorize(userID: String): Credential? {
-        // Load client secrets.
-        val `in`: InputStream = getAssets().open("client_secret.json")
-        Log.d("ttt", "in")
-        Log.d("ttt", "GsonFactory - ${GsonFactory.getDefaultInstance()}")
-        Log.d("ttt", "InputStreamReader - ${InputStreamReader(`in`)}")
-        val clientSecrets =
-            GoogleClientSecrets.load(GsonFactory.getDefaultInstance(), InputStreamReader(`in`))
-        Log.d("ttt", "clientSecrets")
-        // Build flow and trigger user authorization request.
-        val flow = GoogleAuthorizationCodeFlow.Builder(
-            NetHttpTransport(),
-            GsonFactory.getDefaultInstance(),
-            clientSecrets,
-            Collections.singleton(YouTubeScopes.YOUTUBE)
-        )
-            .setDataStoreFactory(MemoryDataStoreFactory())
-            .setAccessType("offline")
-            .build()
-        Log.d("ttt", "flow")
-        return flow.loadCredential(userID)
-//         AuthorizationCodeInstalledApp(
-//            flow, LocalServerReceiver()
-//        ).authorize(userID)
-    }
-
-
     private fun signIn() {
 
         val gsc = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken("812820590609-d6cgvde2vfkolhtf0cd5svpr5t7rvgt2.apps.googleusercontent.com")
+           // .requestIdToken("812820590609-t2kgrbk4esfncnimvghmc1ah41222fpl.apps.googleusercontent.com")
+          //  .requestIdToken("812820590609-d6cgvde2vfkolhtf0cd5svpr5t7rvgt2.apps.googleusercontent.com")
             .requestEmail()
+            .requestScopes(Scope(YouTubeScopes.YOUTUBE))
             .build()
+
 
         mGoogleApiClient = GoogleApiClient.Builder(this)
             .enableAutoManage(this /* FragmentActivity */, this /* OnConnectionFailedListener */)
             .addApi<GoogleSignInOptions>(Auth.GOOGLE_SIGN_IN_API, gsc)
             .build()
         mGoogleSignInClient = GoogleSignIn.getClient(this, gsc)
-        mGoogleSignInClient.signOut()
-//        val signInRequest = BeginSignInRequest.builder()
-//            .setGoogleIdTokenRequestOptions(
-//                BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
-//                    .setSupported(true)
-//                    // Your server's client ID, not your Android client ID.
-//                    .setServerClientId("812820590609-d6cgvde2vfkolhtf0cd5svpr5t7rvgt2.apps.googleusercontent.com")
-//                    // Only show accounts previously used to sign in.
-//                    //.setFilterByAuthorizedAccounts(true)
-//                    .build())
-//            .build()
+       // mGoogleSignInClient.signOut()
+
 
         val intent = Auth.GoogleSignInApi.getSignInIntent(mGoogleApiClient)
         startActivityForResult(intent, RC_SIGN_IN)
@@ -207,8 +175,8 @@ class MainActivity : AppCompatActivity(), GoogleApiClient.OnConnectionFailedList
                 MainScope().launch(Dispatchers.IO) {
                     Log.d("ttt", "credential token - ${credential.token}")
                     val youTubeApiClient = YouTubeApiClient(credential, this@MainActivity)
-                    // val list = youTubeApiClient?.getPlaylists()
-                    //   Log.d("ttt", "list - $list")
+                    val list = youTubeApiClient?.getPlaylists()
+                    Log.d("ttt", "list - $list")
                 }
             } catch (e: Exception) {
                 Log.d("ttt", "exception - ${e.message}, ${e.stackTrace} ${e.javaClass}")
@@ -226,16 +194,6 @@ class MainActivity : AppCompatActivity(), GoogleApiClient.OnConnectionFailedList
         menuInflater.inflate(R.menu.toolbar_menu, menu)
         return super.onCreateOptionsMenu(menu)
     }
-
-    //                 val credential2: GoogleCredentials = GoogleCredentials.create()
-//                    .createScoped(Collections.singleton(YouTubeScopes.YOUTUBE_READONLY))
-
-//                 val requestInitializer : HttpRequestInitializer = HttpRequestInitializer{ request ->
-//                     HttpCredentialsAdapter(credential2).initialize(request)
-//                     request.setConnectTimeout(60000) // 1 minute connect timeout
-//                     request.setReadTimeout(60000) // 1 minute read timeout
-//                 }
-
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
