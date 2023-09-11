@@ -29,5 +29,5 @@ class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
 
         val response = request.execute()
         return response.items
-    }// TODO: Implement methods to fetch playlists, etc.
+    }
 }

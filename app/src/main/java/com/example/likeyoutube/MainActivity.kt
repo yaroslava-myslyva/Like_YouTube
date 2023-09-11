@@ -1,16 +1,25 @@
 package com.example.likeyoutube
 
+import android.app.Activity
+import android.app.Application
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.text.TextUtils
+import android.util.Base64.*
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
 import android.view.ViewGroup
 import android.widget.*
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.PackageManagerCompat.LOG_TAG
 import androidx.fragment.app.Fragment
+import com.auth0.android.jwt.JWT
 import com.example.likeyoutube.databinding.ActivityMainBinding
 import com.example.likeyoutube.fragment.ExploreFragment
 import com.example.likeyoutube.fragment.HomeFragment
@@ -37,31 +46,30 @@ import com.google.api.client.json.gson.GsonFactory
 import com.google.api.client.util.store.MemoryDataStoreFactory
 import com.google.api.services.youtube.YouTubeScopes
 import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import net.openid.appauth.*
+import net.openid.appauth.browser.BrowserAllowList
+import net.openid.appauth.browser.VersionedBrowserMatcher
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import okio.IOException
+import org.json.JSONException
+import org.json.JSONObject
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.security.MessageDigest
+import java.security.SecureRandom
 import java.util.*
 
 
-class MainActivity : AppCompatActivity(), GoogleApiClient.OnConnectionFailedListener {
+class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var toolbar: androidx.appcompat.widget.Toolbar
-    private lateinit var bottomNavigationView: BottomNavigationView
-    private lateinit var frameLayout: FrameLayout
-
-    private lateinit var userprofile_image: ImageView
-
-    private lateinit var mGoogleSignInClient: GoogleSignInClient
-    private lateinit var mGoogleApiClient: GoogleApiClient
+    private var authState: AuthState = AuthState()
+    private var jwt: JWT? = null
+    private lateinit var authorizationService: AuthorizationService
+    lateinit var authServiceConfig: AuthorizationServiceConfiguration
     private val RC_SIGN_IN = 100
-    private val REQUEST_AUTHORIZATION = 101
-
-    private lateinit var auth: FirebaseAuth
-//    private lateinit var user : FirebaseUser
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,148 +77,194 @@ class MainActivity : AppCompatActivity(), GoogleApiClient.OnConnectionFailedList
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        initAuthServiceConfig()
+        initAuthService()
+        binding.button.setOnClickListener {
+            attemptAuthorization()
 
-        toolbar = binding.toolbar
-        setSupportActionBar(toolbar)
-
-        supportActionBar?.title = ""
-
-        bottomNavigationView = binding.bottomNavigation
-        frameLayout = binding.frameLayout
-
-        auth = FirebaseAuth.getInstance()
+        }
 
 
-        bottomNavigationView.setOnNavigationItemSelectedListener {
-            when (it.itemId) {
-                R.id.home -> {
-                    val homeFragment = HomeFragment()
-                    selectedFragment(homeFragment)
-                    true
+    }
+
+    // загрузить состояние
+    fun restoreState() {
+        val jsonString = application
+            .getSharedPreferences(Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
+            .getString(Constants.AUTH_STATE, null)
+
+        if (jsonString != null && !TextUtils.isEmpty(jsonString)) {
+            try {
+                authState = AuthState.jsonDeserialize(jsonString)
+
+                if (!TextUtils.isEmpty(authState.idToken)) {
+                    jwt = JWT(authState.idToken!!)
                 }
-                R.id.explore -> {
-                    val exploreFragment = ExploreFragment()
-                    selectedFragment(exploreFragment)
-                    true
-                }
-                R.id.publish -> {
-                    Toast.makeText(this, "Add a video", Toast.LENGTH_SHORT).show()
-                    true
-                }
-                R.id.subscriptions -> {
-                    val subscriptionsFragment = SubscriptionsFragment()
-                    selectedFragment(subscriptionsFragment)
-                    true
-                }
-                R.id.library -> {
-                    val libraryFragment = LibraryFragment()
-                    selectedFragment(libraryFragment)
-                    true
-                }
-                else -> false
+
+            } catch (jsonException: JSONException) {
             }
         }
-
-        bottomNavigationView.selectedItemId = R.id.home
-
-        binding.icon.setOnClickListener {
-            showDialogue()
-        }
     }
 
-    private fun showDialogue() {
-        val builder = AlertDialog.Builder(this)
-        builder.setCancelable(true)
-
-        val viewGroup = findViewById<ViewGroup>(android.R.id.content)
-        val view = LayoutInflater.from(applicationContext)
-            .inflate(R.layout.item_signin_dialogue, viewGroup, false)
-
-        builder.setView(view)
-        val txt_google_signIn = view.findViewById<TextView>(R.id.txt_google_signIn)
-        txt_google_signIn.setOnClickListener {
-            signIn()
-        }
-        builder.create().show()
+    // сохранить состояние
+    fun persistState() {
+        application.getSharedPreferences(Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(Constants.AUTH_STATE, authState.jsonSerializeString())
+            .commit()
     }
 
-    private fun signIn() {
+    private fun initAuthServiceConfig() {
+        authServiceConfig = AuthorizationServiceConfiguration(
+            Uri.parse(Constants.URL_AUTHORIZATION),
+            Uri.parse(Constants.URL_TOKEN_EXCHANGE),
+            null,
+            Uri.parse(Constants.URL_LOGOUT)
+        )
+    }
 
-        val gsc = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-           // .requestIdToken("812820590609-t2kgrbk4esfncnimvghmc1ah41222fpl.apps.googleusercontent.com")
-          //  .requestIdToken("812820590609-d6cgvde2vfkolhtf0cd5svpr5t7rvgt2.apps.googleusercontent.com")
-            .requestEmail()
-            .requestScopes(Scope(YouTubeScopes.YOUTUBE))
-            .build()
+    private fun initAuthService() {
+        val appAuthConfiguration = AppAuthConfiguration.Builder()
+            .setBrowserMatcher(
+                BrowserAllowList(
+                    VersionedBrowserMatcher.CHROME_CUSTOM_TAB,
+                    VersionedBrowserMatcher.SAMSUNG_CUSTOM_TAB
+                )
+            ).build()
 
+        authorizationService = AuthorizationService(
+            getApplication(),
+            appAuthConfiguration
+        )
+    }
 
-        mGoogleApiClient = GoogleApiClient.Builder(this)
-            .enableAutoManage(this /* FragmentActivity */, this /* OnConnectionFailedListener */)
-            .addApi<GoogleSignInOptions>(Auth.GOOGLE_SIGN_IN_API, gsc)
-            .build()
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gsc)
-       // mGoogleSignInClient.signOut()
+    fun attemptAuthorization() {
+        val secureRandom = SecureRandom()
+        val bytes = ByteArray(64)
+        secureRandom.nextBytes(bytes)
 
+        val encoding = URL_SAFE or NO_PADDING or NO_WRAP
+        val codeVerifier = encodeToString(bytes, encoding)
 
-        val intent = Auth.GoogleSignInApi.getSignInIntent(mGoogleApiClient)
-        startActivityForResult(intent, RC_SIGN_IN)
+        val digest = MessageDigest.getInstance(Constants.MESSAGE_DIGEST_ALGORITHM)
+        val hash = digest.digest(codeVerifier.toByteArray())
+        val codeChallenge = encodeToString(hash, encoding)
+        val builder = AuthorizationRequest.Builder(
+            authServiceConfig,
+            Constants.CLIENT_ID,
+            ResponseTypeValues.CODE,
+            Uri.parse(Constants.URL_AUTH_REDIRECT)
+        )
+            .setCodeVerifier(
+                codeVerifier,
+                codeChallenge,
+                Constants.CODE_VERIFIER_CHALLENGE_METHOD
+            )
+
+        builder.setScopes(
+            Constants.SCOPE_PROFILE,
+            Constants.SCOPE_EMAIL,
+            Constants.SCOPE_OPENID,
+            //  Constants.SCOPE_DRIVE,
+            Constants.SCOPE_YOUTUBE
+        )
+
+        val request = builder.build()
+
+        val authIntent = authorizationService.getAuthorizationRequestIntent(request)
+        startActivityForResult(authIntent, RC_SIGN_IN)
+        //launchForResult(authIntent)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == RC_SIGN_IN) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(data)
 
-            try {
-                val account = task.getResult(ApiException::class.java)
-                Log.d("ttt", "email - ${account.email}")
-                Log.d("ttt", "token - ${account.idToken}")
-                Log.d("ttt", "id - ${account.id}")
+        if (resultCode == Activity.RESULT_OK && requestCode == RC_SIGN_IN) {
+            if (data != null) {
+                handleAuthorizationResponse(data)
+            }
+        }
+    }
 
-                val credential: GoogleAccountCredential = GoogleAccountCredential
-                    .usingOAuth2(this, Collections.singleton(YouTubeScopes.YOUTUBE))
-                    .setSelectedAccountName(account.email)
-                Log.d("ttt", "credential - $credential")
+    private fun launchForResult(intent: Intent) {
 
-                MainScope().launch(Dispatchers.IO) {
-                    Log.d("ttt", "credential token - ${credential.token}")
-                    val youTubeApiClient = YouTubeApiClient(credential, this@MainActivity)
-                    val list = youTubeApiClient?.getPlaylists()
-                    Log.d("ttt", "list - $list")
+        val authorizationLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+
+        ) { result ->
+            Log.d("ttt", "resultCode = ${result.resultCode}")
+            run {
+
+
+            }
+        }
+    }
+
+    fun handleAuthorizationResponse(intent: Intent) {
+        val authorizationResponse: AuthorizationResponse? = AuthorizationResponse.fromIntent(intent)
+        val error = AuthorizationException.fromIntent(intent)
+
+        authState = AuthState(authorizationResponse, error)
+        val tokenExchangeRequest = authorizationResponse?.createTokenExchangeRequest()
+        if (tokenExchangeRequest != null) {
+            authorizationService.performTokenRequest(tokenExchangeRequest) { response, exception ->
+                if (exception != null) {
+                    authState = AuthState()
+
+                } else {
+                    if (response != null) {
+                        authState.update(response, exception)
+                        jwt = JWT(response.idToken!!)
+
+                    }
                 }
-            } catch (e: Exception) {
-                Log.d("ttt", "exception - ${e.message}, ${e.stackTrace} ${e.javaClass}")
+                persistState()
+                makeApiCall()
             }
         }
     }
 
-    private fun selectedFragment(fragment: Fragment) {
-        val fragmentTransaction = supportFragmentManager.beginTransaction()
-        fragmentTransaction.replace(R.id.frame_layout, fragment)
-        fragmentTransaction.commit()
-    }
+    fun makeApiCall() {
+        Log.d("ttt", "makeApiCall")
+        authState.performActionWithFreshTokens(authorizationService,
+            object : AuthState.AuthStateAction {
+                override fun execute(
+                    accessToken: String?,
+                    idToken: String?,
+                    ex: AuthorizationException?
+                ) {
+                    Log.d("ttt", "access - $accessToken")
+                    val credential: GoogleAccountCredential = GoogleAccountCredential
+                        .usingOAuth2(
+                            this@MainActivity,
+                            Collections.singleton(YouTubeScopes.YOUTUBE)
+                        )
+                        .setSelectedAccountName("yaroslava.met@gmail.com")
+                    GlobalScope.launch {
+                        MainScope().launch(Dispatchers.IO) {
+                            val youTubeApiClient = YouTubeApiClient(credential, this@MainActivity)
+                            val list = youTubeApiClient.getPlaylists()
+                            Log.d("ttt", "list - $list")
+                        }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.toolbar_menu, menu)
-        return super.onCreateOptionsMenu(menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.notification -> {
-                Toast.makeText(this, "Notification", Toast.LENGTH_SHORT).show()
+//                        async(Dispatchers.IO) {
+//                            val client = OkHttpClient()
+//                            val request = Request.Builder()
+//                                .url(Constants.URL_API_CALL)
+//                                .addHeader("Authorization", "Bearer " + authState.accessToken)
+//                                .build()
+//
+//                            try {
+//                                val response = client.newCall(request).execute()
+//                                val jsonBody = response.body?.string() ?: ""
+//                                Log.i("ttt", JSONObject(jsonBody).toString())
+//                            } catch (e: Exception) { }
+//                        }
+                    }
+                }
             }
-            R.id.search -> {
-                Toast.makeText(this, "Search", Toast.LENGTH_SHORT).show()
-
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-        return false
+        )
     }
 
-    override fun onConnectionFailed(p0: ConnectionResult) {
-        TODO("Not yet implemented")
-    }
 }
 
