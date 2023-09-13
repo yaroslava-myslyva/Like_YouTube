@@ -27,7 +27,6 @@
                 android:contentDescription="TODO"
                 android:src="@drawable/ic_baseline_smart_display_24" />
 
-
             <ImageView
                 android:id="@+id/user_profile_image"
                 android:layout_width="32dp"
@@ -47,23 +46,14 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <Button
-        android:id="@+id/button"
-        android:layout_width="wrap_content"
+    <FrameLayout
+        android:id="@+id/fragment"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Sign in"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@+id/appBar"
+        app:layout_constraintBottom_toBottomOf="parent"/>
 
-    <!--    <FrameLayout-->
-    <!--        android:layout_width="match_parent"-->
-    <!--        android:layout_height="match_parent"-->
-    <!--        android:layout_below="@+id/appBar"-->
-    <!--        android:layout_above="@+id/bottom_navigation"-->
-    <!--        android:id="@+id/frame_layout"/>-->
-
+    <!--    android:layout_above="@+id/bottom_navigation"-->
     <!--    <com.google.android.material.bottomnavigation.BottomNavigationView-->
     <!--        android:id="@+id/bottom_navigation"-->
     <!--        android:layout_width="match_parent"-->

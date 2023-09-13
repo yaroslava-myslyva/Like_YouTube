@@ -1,5 +1,6 @@
-package com.example.likeyoutube
+package com.example.likeyoutube.internet
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -10,6 +11,7 @@ import android.util.Log
 import androidx.core.app.ActivityCompat.startActivityForResult
 import com.auth0.android.jwt.JWT
 import com.auth0.jwt.interfaces.DecodedJWT
+import com.example.likeyoutube.Constants
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.services.youtube.YouTubeScopes
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +25,6 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.*
 
-//надо бы сделать, чтобы у него был только один инстанс
 class AuthenticationImplementer {
     private var authState: AuthState = AuthState()
     private var jwt: JWT? = null
@@ -31,26 +32,45 @@ class AuthenticationImplementer {
     private lateinit var authServiceConfig: AuthorizationServiceConfiguration
     private lateinit var activity: Activity
 
-    fun setActivity(act: Activity) {
+    companion object{
+        @SuppressLint("StaticFieldLeak")
+        @Volatile
+        private var instance: AuthenticationImplementer? = null
+        fun getInctance() :AuthenticationImplementer{
+        return instance ?: synchronized(this) {
+            instance = AuthenticationImplementer()
+            return instance as AuthenticationImplementer
+        }
+    }}
+
+    fun initAI(act: Activity) {
         activity = act
+        initAuthServiceConfig()
+        initAuthService()
     }
 
     // загрузить состояние
-    fun restoreState() {
+    fun restoreState() :Boolean{
         val jsonString = activity.application
             .getSharedPreferences(Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
             .getString(Constants.AUTH_STATE, null)
 
         if (jsonString != null && !TextUtils.isEmpty(jsonString)) {
-            try {
+            return try {
                 authState = AuthState.jsonDeserialize(jsonString)
 
                 if (!TextUtils.isEmpty(authState.idToken)) {
                     jwt = JWT(authState.idToken!!)
+                    true
+                } else{
+                    false
                 }
 
             } catch (jsonException: JSONException) {
+                false
             }
+        } else {
+            return false
         }
     }
 
@@ -62,7 +82,7 @@ class AuthenticationImplementer {
             .apply()
     }
 
-    fun initAuthServiceConfig() {
+    private fun initAuthServiceConfig() {
         authServiceConfig = AuthorizationServiceConfiguration(
             Uri.parse(Constants.URL_AUTHORIZATION),
             Uri.parse(Constants.URL_TOKEN_EXCHANGE),
@@ -72,7 +92,7 @@ class AuthenticationImplementer {
     }
 
     //Говорим, что хотим авторизоваться через браузер.
-    fun initAuthService() {
+    private fun initAuthService() {
         val appAuthConfiguration = AppAuthConfiguration.Builder()
             .setBrowserMatcher(
                 BrowserAllowList(
