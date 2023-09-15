@@ -5,6 +5,7 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import com.example.likeyoutube.MainActivity
 import com.example.likeyoutube.R
 import com.example.likeyoutube.databinding.FragmentSignInBinding
 import com.example.likeyoutube.internet.AuthenticationImplementer
@@ -23,10 +24,14 @@ class SignInFragment : Fragment() {
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
+        val mainActivity = activity as MainActivity
+        mainActivity.activityMainBinding.userName.text = ""
+        mainActivity.activityMainBinding.userProfileImage.setImageResource(R.drawable.ic_baseline_account_circle_24)
 
         binding.button.setOnClickListener {
             authenticationImplementer.attemptAuthorization()
         }
+        mainActivity.activityMainBinding.userProfileImage.setOnClickListener { }
     }
 
 }

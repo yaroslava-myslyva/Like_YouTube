@@ -12,14 +12,14 @@ import com.example.likeyoutube.internet.AuthenticationImplementer
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityMainBinding
+    lateinit var activityMainBinding: ActivityMainBinding
     private val authenticationImplementer = AuthenticationImplementer.getInctance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        activityMainBinding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(activityMainBinding.root)
 
         authenticationImplementer.initActivity(this)
         authenticationImplementer.restoreState()
@@ -43,10 +43,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun selectFragment(fragment: Fragment) {
+    private fun selectFragment(fragment: Fragment) {
         val fragmentTransaction = supportFragmentManager.beginTransaction()
-        fragmentTransaction.replace(binding.fragment.id, fragment)
+        fragmentTransaction.replace(activityMainBinding.fragment.id, fragment)
         fragmentTransaction.commit()
     }
+
 }
 

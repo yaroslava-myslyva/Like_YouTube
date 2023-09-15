@@ -11,6 +11,7 @@ import android.util.Log
 import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.lifecycle.MutableLiveData
 import com.auth0.android.jwt.JWT
+import com.auth0.jwt.interfaces.Claim
 import com.auth0.jwt.interfaces.DecodedJWT
 import com.example.likeyoutube.Constants
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
@@ -56,24 +57,21 @@ class AuthenticationImplementer {
     }
 
     // загрузить состояние
-    fun restoreState(): Boolean {
+    fun restoreState(){
         val jsonString = activity.application.getSharedPreferences(
             Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
         ).getString(Constants.AUTH_STATE, null)
         mutable.value = jsonString ?: "{}"
         Log.d("ttt", "jsonString = $jsonString")
-        return if (jsonString != null && !TextUtils.isEmpty(jsonString)) {
+        if (jsonString != null && !TextUtils.isEmpty(jsonString)) {
             try {
                 authState = AuthState.jsonDeserialize(jsonString)
                 if (!TextUtils.isEmpty(authState.idToken)) {
                     jwt = JWT(authState.idToken!!)
-                    true
-                } else false
+                }
             } catch (jsonException: JSONException) {
-                false
+                Log.d("ttt", "restoreState jsonException ${jsonException.message} ${jsonException.javaClass}")
             }
-        } else {
-            false
         }
     }
 
@@ -145,7 +143,6 @@ class AuthenticationImplementer {
         }
     }
 
-
     fun handleAuthorizationResponse(intent: Intent) {
         val authorizationResponse: AuthorizationResponse? = AuthorizationResponse.fromIntent(intent)
         val error = AuthorizationException.fromIntent(intent)
@@ -162,18 +159,28 @@ class AuthenticationImplementer {
                     if (response != null) {
                         authState.update(response, exception)
                         jwt = JWT(response.idToken!!)
-                        val j: DecodedJWT = com.auth0.jwt.JWT.decode(jwt.toString())
+                        val decodedJWT: DecodedJWT = com.auth0.jwt.JWT.decode(jwt.toString())
+                        savingUserData(decodedJWT.claims)
                         Log.d(
-                            "ttt", "jwt - ${j.claims[Constants.DATA_EMAIL]}"
+                            "ttt", "jwt - ${decodedJWT.claims[Constants.DATA_EMAIL]}"
                         ) // в claims хранится мапа с данными пользователя. Достаём его емейл.
-                        Log.d(
-                            "ttt", "scope - ${authState.scope}"
-                        )
                     }
                 }
                 persistState()
             }
         }
+    }
+
+    private fun savingUserData(claims: Map<String, Claim>){
+        with(activity.application.getSharedPreferences(
+            Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
+        ).edit()){
+            putString(Constants.DATA_PICTURE, claims[Constants.DATA_PICTURE]?.asString()).apply()
+            putString(Constants.DATA_FIRST_NAME, claims[Constants.DATA_FIRST_NAME]?.asString()).apply()
+            putString(Constants.DATA_LAST_NAME, claims[Constants.DATA_LAST_NAME]?.asString()).apply()
+            putString(Constants.DATA_EMAIL, claims[Constants.DATA_EMAIL]?.asString()).apply()
+        }
+
     }
 
     fun makeApiCall() {
@@ -185,6 +192,9 @@ class AuthenticationImplementer {
                     accessToken: String?, idToken: String?, ex: AuthorizationException?
                 ) {
                     Log.d("ttt", "accessToken - $accessToken")
+                    val email = activity.application.getSharedPreferences(
+                        Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
+                    ).getString(Constants.DATA_EMAIL, "")
 
                     MainScope().launch(Dispatchers.IO) {
                         try {
@@ -192,7 +202,7 @@ class AuthenticationImplementer {
                                 GoogleAccountCredential.usingOAuth2(
                                         activity,
                                         Collections.singleton(YouTubeScopes.YOUTUBE)
-                                    ).setSelectedAccountName("yaroslava.met@gmail.com")
+                                    ).setSelectedAccountName(email)
                             Log.d("ttt", "credential - ${credential.token}")
                             val youTubeApiClient = YouTubeApiClient(credential, activity)
                             val list = youTubeApiClient.getPlaylists()
