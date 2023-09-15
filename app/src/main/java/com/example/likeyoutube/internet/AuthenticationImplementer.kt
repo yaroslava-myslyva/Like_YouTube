@@ -9,6 +9,7 @@ import android.text.TextUtils
 import android.util.Base64
 import android.util.Log
 import androidx.core.app.ActivityCompat.startActivityForResult
+import androidx.lifecycle.MutableLiveData
 import com.auth0.android.jwt.JWT
 import com.auth0.jwt.interfaces.DecodedJWT
 import com.example.likeyoutube.Constants
@@ -20,66 +21,69 @@ import kotlinx.coroutines.launch
 import net.openid.appauth.*
 import net.openid.appauth.browser.BrowserAllowList
 import net.openid.appauth.browser.VersionedBrowserMatcher
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.json.JSONException
+import java.io.IOException
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.*
 
 class AuthenticationImplementer {
     private var authState: AuthState = AuthState()
+    var mutable = MutableLiveData<String>("{}")
     private var jwt: JWT? = null
     private lateinit var authorizationService: AuthorizationService
     private lateinit var authServiceConfig: AuthorizationServiceConfiguration
     private lateinit var activity: Activity
 
-    companion object{
+    companion object {
         @SuppressLint("StaticFieldLeak")
         @Volatile
         private var instance: AuthenticationImplementer? = null
-        fun getInctance() :AuthenticationImplementer{
-        return instance ?: synchronized(this) {
-            instance = AuthenticationImplementer()
-            return instance as AuthenticationImplementer
+        fun getInctance(): AuthenticationImplementer {
+            return instance ?: synchronized(this) {
+                instance = AuthenticationImplementer()
+                return instance as AuthenticationImplementer
+            }
         }
-    }}
+    }
 
-    fun initAI(act: Activity) {
+    fun initActivity(act: Activity) {
         activity = act
         initAuthServiceConfig()
         initAuthService()
     }
 
     // загрузить состояние
-    fun restoreState() :Boolean{
-        val jsonString = activity.application
-            .getSharedPreferences(Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
-            .getString(Constants.AUTH_STATE, null)
-
-        if (jsonString != null && !TextUtils.isEmpty(jsonString)) {
-            return try {
+    fun restoreState(): Boolean {
+        val jsonString = activity.application.getSharedPreferences(
+            Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
+        ).getString(Constants.AUTH_STATE, null)
+        mutable.value = jsonString ?: "{}"
+        Log.d("ttt", "jsonString = $jsonString")
+        return if (jsonString != null && !TextUtils.isEmpty(jsonString)) {
+            try {
                 authState = AuthState.jsonDeserialize(jsonString)
-
                 if (!TextUtils.isEmpty(authState.idToken)) {
                     jwt = JWT(authState.idToken!!)
                     true
-                } else{
-                    false
-                }
-
+                } else false
             } catch (jsonException: JSONException) {
                 false
             }
         } else {
-            return false
+            false
         }
     }
 
     // сохранить состояние
     fun persistState() {
-        activity.application.getSharedPreferences(Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putString(Constants.AUTH_STATE, authState.jsonSerializeString())
-            .apply()
+        activity.application.getSharedPreferences(
+            Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
+        ).edit().putString(Constants.AUTH_STATE, authState.jsonSerializeString()).apply()
+        mutable.value = authState.jsonSerializeString()
+        Log.d("ttt", "persistState ${authState.jsonSerializeString()}")
     }
 
     private fun initAuthServiceConfig() {
@@ -93,17 +97,15 @@ class AuthenticationImplementer {
 
     //Говорим, что хотим авторизоваться через браузер.
     private fun initAuthService() {
-        val appAuthConfiguration = AppAuthConfiguration.Builder()
-            .setBrowserMatcher(
-                BrowserAllowList(
-                    VersionedBrowserMatcher.CHROME_CUSTOM_TAB,
-                    VersionedBrowserMatcher.SAMSUNG_CUSTOM_TAB
-                )
-            ).build()
+        val appAuthConfiguration = AppAuthConfiguration.Builder().setBrowserMatcher(
+            BrowserAllowList(
+                VersionedBrowserMatcher.CHROME_CUSTOM_TAB,
+                VersionedBrowserMatcher.SAMSUNG_CUSTOM_TAB
+            )
+        ).build()
 
         authorizationService = AuthorizationService(
-            activity.application,
-            appAuthConfiguration
+            activity.application, appAuthConfiguration
         )
     }
 
@@ -124,12 +126,9 @@ class AuthenticationImplementer {
             Constants.CLIENT_ID,
             ResponseTypeValues.CODE,
             Uri.parse(Constants.URL_AUTH_REDIRECT)
+        ).setCodeVerifier(
+            codeVerifier, codeChallenge, Constants.CODE_VERIFIER_CHALLENGE_METHOD
         )
-            .setCodeVerifier(
-                codeVerifier,
-                codeChallenge,
-                Constants.CODE_VERIFIER_CHALLENGE_METHOD
-            )
 
         builder.setScopes(
             Constants.SCOPE_PROFILE,
@@ -137,11 +136,13 @@ class AuthenticationImplementer {
             Constants.SCOPE_OPENID,
             Constants.SCOPE_YOUTUBE
         )
-
-        val request = builder.build()
-
-        val authIntent = authorizationService.getAuthorizationRequestIntent(request)
-        startActivityForResult(activity, authIntent, Constants.RC_SIGN_IN, null)
+        try {
+            val request = builder.build()
+            val authIntent = authorizationService.getAuthorizationRequestIntent(request)
+            startActivityForResult(activity, authIntent, Constants.RC_SIGN_IN, null)
+        } catch (e: java.lang.Exception) {
+            Log.d("ttt", "can't sign in ${e.javaClass} ${e.message}")
+        }
     }
 
 
@@ -150,25 +151,27 @@ class AuthenticationImplementer {
         val error = AuthorizationException.fromIntent(intent)
 
         authState = AuthState(authorizationResponse, error)
-        val tokenExchangeRequest = authorizationResponse?.createTokenExchangeRequest()
+        val tokenExchangeRequest =
+            authorizationResponse?.createTokenExchangeRequest(authorizationResponse.additionalParameters)
         if (tokenExchangeRequest != null) {
             authorizationService.performTokenRequest(tokenExchangeRequest) { response, exception ->
                 if (exception != null) {
                     authState = AuthState()
-
+                    Log.d("ttt", "exception - ${exception.message}  ${exception.javaClass}")
                 } else {
                     if (response != null) {
                         authState.update(response, exception)
                         jwt = JWT(response.idToken!!)
                         val j: DecodedJWT = com.auth0.jwt.JWT.decode(jwt.toString())
                         Log.d(
-                            "ttt",
-                            "jwt - ${j.claims[Constants.DATA_EMAIL]}"
+                            "ttt", "jwt - ${j.claims[Constants.DATA_EMAIL]}"
                         ) // в claims хранится мапа с данными пользователя. Достаём его емейл.
+                        Log.d(
+                            "ttt", "scope - ${authState.scope}"
+                        )
                     }
                 }
                 persistState()
-                makeApiCall()
             }
         }
     }
@@ -179,29 +182,43 @@ class AuthenticationImplementer {
             authorizationService,
             object : AuthState.AuthStateAction {
                 override fun execute(
-                    accessToken: String?,
-                    idToken: String?,
-                    ex: AuthorizationException?
+                    accessToken: String?, idToken: String?, ex: AuthorizationException?
                 ) {
-                    val credential: GoogleAccountCredential = GoogleAccountCredential
-                        .usingOAuth2(
-                            activity,
-                            Collections.singleton(YouTubeScopes.YOUTUBE)
-                        )
-                        .setSelectedAccountName("yaroslava.met@gmail.com") //тут надо бы не вручную писать, сам понимаешь
+                    Log.d("ttt", "accessToken - $accessToken")
 
                     MainScope().launch(Dispatchers.IO) {
                         try {
-                            val youTubeApiClient =
-                                YouTubeApiClient(credential, activity)
+                            val credential: GoogleAccountCredential =
+                                GoogleAccountCredential.usingOAuth2(
+                                        activity,
+                                        Collections.singleton(YouTubeScopes.YOUTUBE)
+                                    ).setSelectedAccountName("yaroslava.met@gmail.com")
+                            Log.d("ttt", "credential - ${credential.token}")
+                            val youTubeApiClient = YouTubeApiClient(credential, activity)
                             val list = youTubeApiClient.getPlaylists()
                             Log.d("ttt", "list - $list")
                         } catch (e: Exception) {
-                            Log.i("ttt", "ex = ${e.message}")
+                            Log.d(
+                                "ttt", "can't call = ${e.message} ${e.javaClass} "
+                            )
                         }
                     }
                 }
+            })
+    }
+
+    fun signOutWithoutRedirect() {
+        val client = OkHttpClient()
+        val request = Request.Builder().url(Constants.URL_LOGOUT + authState.accessToken).build()
+        MainScope().launch(Dispatchers.IO) {
+            try {
+                client.newCall(request).execute()
+                authState = AuthState()
+                launch(Dispatchers.Main) { persistState() }
+
+            } catch (e: IOException) {
+                Log.d("ttt", "can't logout ${e.message} ${e.javaClass}")
             }
-        )
+        }
     }
 }

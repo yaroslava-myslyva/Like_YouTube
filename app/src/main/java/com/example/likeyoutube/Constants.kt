@@ -22,11 +22,12 @@ class Constants {
         val URL_AUTHORIZATION = "https://accounts.google.com/o/oauth2/v2/auth"
         val URL_TOKEN_EXCHANGE = "https://www.googleapis.com/oauth2/v4/token"
         val URL_AUTH_REDIRECT = "com.example.likeyoutube:/oauth2redirect"
-        val URL_API_CALL = "https://www.googleapis.com/youtube/v3"
+        val URL_API_CALL = "https://www.googleapis.com/youtube"
+
         val URL_LOGOUT = "https://accounts.google.com/o/oauth2/revoke?token="
 
         val URL_LOGOUT_REDIRECT = "com.example.likeyoutube:/logout"
 
-        val RC_SIGN_IN = 100 // любое число
+        val RC_SIGN_IN = 100
     }
 }
