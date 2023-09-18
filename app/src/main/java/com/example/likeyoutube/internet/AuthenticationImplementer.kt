@@ -255,40 +255,5 @@ class AuthenticationImplementer private constructor() {
         }
     }
 
-    inner class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
-        private var mYouTube: YouTube
 
-        init {
-            val httpTransport: HttpTransport = NetHttpTransport()
-            mYouTube = YouTube.Builder(
-                httpTransport,
-                GsonFactory.getDefaultInstance(),
-                credential
-            )
-                .setApplicationName(context.getString(R.string.app_name))
-                .build()
-        }
-
-        fun getAllPlaylists(): MutableList<Playlist>? {
-            val playlists = mutableListOf<Playlist>()
-            var nextPageToken: String? = null
-
-            do {
-                val request = mYouTube.playlists().list("snippet")
-                request.mine = true
-                request.pageToken = nextPageToken
-
-                val response = request.execute()
-                val items = response.items
-
-                if (items != null) {
-                    playlists.addAll(items)
-                }
-
-                nextPageToken = response.nextPageToken
-            } while (nextPageToken != null)
-
-            return playlists
-        }
-    }
 }
