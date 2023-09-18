@@ -48,6 +48,8 @@ class MainActivity : AppCompatActivity() {
         fragmentTransaction.replace(activityMainBinding.fragment.id, fragment)
         fragmentTransaction.commit()
     }
-
+companion object{
+    val TAG = "ttt"
+}
 }
 

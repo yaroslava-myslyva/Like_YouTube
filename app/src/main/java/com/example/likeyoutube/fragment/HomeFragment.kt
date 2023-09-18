@@ -13,6 +13,7 @@ import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.example.likeyoutube.Constants
 import com.example.likeyoutube.MainActivity
 import com.example.likeyoutube.R
+import com.example.likeyoutube.WorkerWithApiClient
 import com.example.likeyoutube.databinding.FragmentHomeBinding
 import com.example.likeyoutube.internet.AuthenticationImplementer
 
@@ -21,6 +22,7 @@ class HomeFragment : Fragment() {
 
     private lateinit var fragmentHomeBinding: FragmentHomeBinding
     private val authenticationImplementer = AuthenticationImplementer.getInctance()
+    private val workerWithApiClient = WorkerWithApiClient()
 
 
     override fun onCreateView(
@@ -49,8 +51,10 @@ class HomeFragment : Fragment() {
             .transition(DrawableTransitionOptions.withCrossFade(1500))
             .into(mainActivity.activityMainBinding.userProfileImage)
 
+
+
         fragmentHomeBinding.buttonMakeApiCall.setOnClickListener {
-            authenticationImplementer.makeApiCall()
+            workerWithApiClient.logAllPlaylistsTitles()
         }
 
         val popupMenu = PopupMenu(mainActivity, mainActivity.activityMainBinding.userProfileImage)

@@ -14,8 +14,15 @@ import com.auth0.android.jwt.JWT
 import com.auth0.jwt.interfaces.Claim
 import com.auth0.jwt.interfaces.DecodedJWT
 import com.example.likeyoutube.Constants
+import com.example.likeyoutube.R
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
+import com.google.api.client.http.HttpRequestInitializer
+import com.google.api.client.http.HttpTransport
+import com.google.api.client.http.javanet.NetHttpTransport
+import com.google.api.client.json.gson.GsonFactory
+import com.google.api.services.youtube.YouTube
 import com.google.api.services.youtube.YouTubeScopes
+import com.google.api.services.youtube.model.Playlist
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
@@ -30,7 +37,7 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.*
 
-class AuthenticationImplementer {
+class AuthenticationImplementer private constructor() {
     private var authState: AuthState = AuthState()
     var mutable = MutableLiveData<String>("{}")
     private var jwt: JWT? = null
@@ -57,7 +64,7 @@ class AuthenticationImplementer {
     }
 
     // загрузить состояние
-    fun restoreState(){
+    fun restoreState() {
         val jsonString = activity.application.getSharedPreferences(
             Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
         ).getString(Constants.AUTH_STATE, null)
@@ -70,7 +77,10 @@ class AuthenticationImplementer {
                     jwt = JWT(authState.idToken!!)
                 }
             } catch (jsonException: JSONException) {
-                Log.d("ttt", "restoreState jsonException ${jsonException.message} ${jsonException.javaClass}")
+                Log.d(
+                    "ttt",
+                    "restoreState jsonException ${jsonException.message} ${jsonException.javaClass}"
+                )
             }
         }
     }
@@ -171,50 +181,63 @@ class AuthenticationImplementer {
         }
     }
 
-    private fun savingUserData(claims: Map<String, Claim>){
-        with(activity.application.getSharedPreferences(
-            Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
-        ).edit()){
+    private fun savingUserData(claims: Map<String, Claim>) {
+        with(
+            activity.application.getSharedPreferences(
+                Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
+            ).edit()
+        ) {
             putString(Constants.DATA_PICTURE, claims[Constants.DATA_PICTURE]?.asString()).apply()
-            putString(Constants.DATA_FIRST_NAME, claims[Constants.DATA_FIRST_NAME]?.asString()).apply()
-            putString(Constants.DATA_LAST_NAME, claims[Constants.DATA_LAST_NAME]?.asString()).apply()
+            putString(
+                Constants.DATA_FIRST_NAME,
+                claims[Constants.DATA_FIRST_NAME]?.asString()
+            ).apply()
+            putString(
+                Constants.DATA_LAST_NAME,
+                claims[Constants.DATA_LAST_NAME]?.asString()
+            ).apply()
             putString(Constants.DATA_EMAIL, claims[Constants.DATA_EMAIL]?.asString()).apply()
         }
 
     }
 
-    fun makeApiCall() {
+    fun getYouTubeApi(): YouTubeApiClient? {
         Log.d("ttt", "makeApiCall")
-        authState.performActionWithFreshTokens(
-            authorizationService,
-            object : AuthState.AuthStateAction {
-                override fun execute(
-                    accessToken: String?, idToken: String?, ex: AuthorizationException?
-                ) {
-                    Log.d("ttt", "accessToken - $accessToken")
+        var youTubeApiClient: YouTubeApiClient? = null
+        if(authState.needsTokenRefresh){
+            authState.refreshToken
+        }
+
+//        authState.performActionWithFreshTokens(
+//            authorizationService,
+//            object : AuthState.AuthStateAction {
+//                override fun execute(
+//                    accessToken: String?, idToken: String?, ex: AuthorizationException?
+//                ) {
+//                    Log.d("ttt", "accessToken - $accessToken")
                     val email = activity.application.getSharedPreferences(
                         Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
                     ).getString(Constants.DATA_EMAIL, "")
 
-                    MainScope().launch(Dispatchers.IO) {
-                        try {
-                            val credential: GoogleAccountCredential =
-                                GoogleAccountCredential.usingOAuth2(
-                                        activity,
-                                        Collections.singleton(YouTubeScopes.YOUTUBE)
-                                    ).setSelectedAccountName(email)
-                            Log.d("ttt", "credential - ${credential.token}")
-                            val youTubeApiClient = YouTubeApiClient(credential, activity)
-                            val list = youTubeApiClient.getPlaylists()
-                            Log.d("ttt", "list - $list")
-                        } catch (e: Exception) {
-                            Log.d(
-                                "ttt", "can't call = ${e.message} ${e.javaClass} "
-                            )
-                        }
+                    try {
+                        val credential: GoogleAccountCredential =
+                            GoogleAccountCredential.usingOAuth2(
+                                activity,
+                                Collections.singleton(YouTubeScopes.YOUTUBE)
+                            ).setSelectedAccountName(email)
+                        Log.d("ttt", "credential - ${credential.token}")
+                        youTubeApiClient =  YouTubeApiClient(credential, activity)
+                        Log.d("ttt", "list - ${youTubeApiClient.getAllPlaylists()}")
+
+                    } catch (e: Exception) {
+                        Log.d(
+                            "ttt", "can't call = ${e.message} ${e.javaClass} "
+                        )
+
                     }
-                }
-            })
+             //   }
+          //  })
+        return youTubeApiClient
     }
 
     fun signOutWithoutRedirect() {
@@ -229,6 +252,43 @@ class AuthenticationImplementer {
             } catch (e: IOException) {
                 Log.d("ttt", "can't logout ${e.message} ${e.javaClass}")
             }
+        }
+    }
+
+    inner class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
+        private var mYouTube: YouTube
+
+        init {
+            val httpTransport: HttpTransport = NetHttpTransport()
+            mYouTube = YouTube.Builder(
+                httpTransport,
+                GsonFactory.getDefaultInstance(),
+                credential
+            )
+                .setApplicationName(context.getString(R.string.app_name))
+                .build()
+        }
+
+        fun getAllPlaylists(): MutableList<Playlist>? {
+            val playlists = mutableListOf<Playlist>()
+            var nextPageToken: String? = null
+
+            do {
+                val request = mYouTube.playlists().list("snippet")
+                request.mine = true
+                request.pageToken = nextPageToken
+
+                val response = request.execute()
+                val items = response.items
+
+                if (items != null) {
+                    playlists.addAll(items)
+                }
+
+                nextPageToken = response.nextPageToken
+            } while (nextPageToken != null)
+
+            return playlists
         }
     }
 }
