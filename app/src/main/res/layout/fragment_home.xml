@@ -8,15 +8,33 @@
     tools:context=".fragment.HomeFragment">
 
     <Button
-        android:id="@+id/button_make_api_call"
+        android:id="@+id/button_save_my_playlists"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Give me list please"
-        android:layout_gravity="center"
-        android:gravity="center"
+        android:text="Save my playlists"
+        app:layout_constraintBottom_toTopOf="@id/button_delete_one_song"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/button_delete_one_song"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Delete one song"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/button_restore_my_playlists"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Restore my playlists"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/button_delete_one_song" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

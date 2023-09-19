@@ -8,6 +8,9 @@ import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.youtube.YouTube
 import com.google.api.services.youtube.model.Playlist
+import com.google.api.services.youtube.model.PlaylistItem
+import com.google.api.services.youtube.model.PlaylistItemSnippet
+import com.google.api.services.youtube.model.ResourceId
 
 class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
     private var mYouTube: YouTube
@@ -46,7 +49,7 @@ class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
     }
 
 
-    fun getSongsFromPlaylist(playlistId: String): MutableList<String>? {
+    fun getSongsTitlesFromPlaylist(playlistId: String): MutableList<String>? {
         val songs = mutableListOf<String>()
         var nextPageToken: String? = null
 
@@ -69,5 +72,49 @@ class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
         } while (nextPageToken != null)
 
         return songs
+    }
+
+    fun getSongsIDFromPlaylist(playlistId: String): MutableList<String>? {
+        val ids = mutableListOf<String>()
+        var nextPageToken: String? = null
+
+        do {
+            val playlistItemsRequest = mYouTube.playlistItems().list("snippet")
+            playlistItemsRequest.playlistId = playlistId
+            playlistItemsRequest.pageToken = nextPageToken
+
+            val playlistItemsResponse = playlistItemsRequest.execute()
+            val playlistItems = playlistItemsResponse.items
+
+            if (playlistItems != null) {
+                for (playlistItem in playlistItems) {
+                    val videoId = playlistItem.id
+                    ids.add(videoId)
+                }
+            }
+
+            nextPageToken = playlistItemsResponse.nextPageToken
+        } while (nextPageToken != null)
+
+        return ids
+    }
+
+    fun deleteVideoFromPlaylist(playlistItemId: String) {
+        val playlistItemsDeleteRequest = mYouTube.playlistItems().delete(playlistItemId)
+        playlistItemsDeleteRequest.execute()
+    }
+
+    fun addVideoToPlaylist(playlistId: String, videoId: String) {
+        val playlistItem = PlaylistItem()
+        val snippet = PlaylistItemSnippet()
+        snippet.playlistId = playlistId
+        snippet.resourceId = ResourceId()
+        snippet.resourceId.kind = "youtube#video"
+        snippet.resourceId.videoId = videoId
+        playlistItem.snippet = snippet
+
+        val playlistItemsInsertRequest = mYouTube.playlistItems().insert("snippet", playlistItem)
+        val response = playlistItemsInsertRequest.execute()
+
     }
 }

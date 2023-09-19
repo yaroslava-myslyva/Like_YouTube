@@ -43,7 +43,7 @@ class AuthenticationImplementer private constructor() {
     private var jwt: JWT? = null
     private lateinit var authorizationService: AuthorizationService
     private lateinit var authServiceConfig: AuthorizationServiceConfiguration
-    private lateinit var activity: Activity
+    lateinit var activity: Activity
 
     companion object {
         @SuppressLint("StaticFieldLeak")

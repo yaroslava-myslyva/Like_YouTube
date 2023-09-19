@@ -53,8 +53,12 @@ class HomeFragment : Fragment() {
 
 
 
-        fragmentHomeBinding.buttonMakeApiCall.setOnClickListener {
-            workerWithApiClient.logMapSongsOfPlaylist()
+        fragmentHomeBinding.buttonSaveMyPlaylists.setOnClickListener {
+            workerWithApiClient.saveMyPlaylists()
+        }
+
+        fragmentHomeBinding.buttonRestoreMyPlaylists.setOnClickListener{
+            workerWithApiClient.restoreMyPlaylists()
         }
 
         val popupMenu = PopupMenu(mainActivity, mainActivity.activityMainBinding.userProfileImage)
