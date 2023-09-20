@@ -1,8 +1,6 @@
 package com.example.likeyoutube.internet
 
 import android.content.Context
-import android.util.Log
-import com.example.likeyoutube.MainActivity.Companion.TAG
 import com.example.likeyoutube.R
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.http.HttpRequestInitializer
@@ -50,7 +48,7 @@ class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
     }
 
 
-    fun getSongsTitlesFromPlaylist(playlistId: String): MutableList<String>? {
+    fun getAllSongsTitlesFromPlaylist(playlistId: String): MutableList<String>? {
         val songs = mutableListOf<String>()
         var nextPageToken: String? = null
 
@@ -75,7 +73,7 @@ class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
         return songs
     }
 
-    fun getSongsIDFromPlaylist(playlistId: String): MutableList<String>? {
+    fun getAllSongsIDFromPlaylist(playlistId: String): MutableList<String>? {
         val ids = mutableListOf<String>()
         var nextPageToken: String? = null
 

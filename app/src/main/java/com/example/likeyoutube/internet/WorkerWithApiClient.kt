@@ -1,10 +1,9 @@
-package com.example.likeyoutube
+package com.example.likeyoutube.internet
 
 import android.content.Context
 import android.util.Log
+import com.example.likeyoutube.Constants
 import com.example.likeyoutube.MainActivity.Companion.TAG
-import com.example.likeyoutube.internet.AuthenticationImplementer
-import com.example.likeyoutube.internet.YouTubeApiClient
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
@@ -40,13 +39,18 @@ class WorkerWithApiClient {
             isYouTubeApiClientNull()
             val list = youTubeApiClient?.getAllPlaylists()
             val firstPlaylist = list?.get(1)
-            val myPlaylistsTitlesAndIDsString = getStringFromShared(Constants.DATA_PLAYLISTS_TITLES_AND_IDS)
-            myPlaylistsTitlesAndIDs = myPlaylistsTitlesAndIDsString?.let { deserializeStringToMap(it) }
+            val myPlaylistsTitlesAndIDsString =
+                getStringFromShared(Constants.DATA_PLAYLISTS_TITLES_AND_IDS)
+            myPlaylistsTitlesAndIDs =
+                myPlaylistsTitlesAndIDsString?.let { deserializeStringToMap(it) }
             val mustBeId = myPlaylistsTitlesAndIDs?.get("1")
-            Log.d(TAG, "logListSongsTitlesOfOnePlaylist: ${mustBeId == firstPlaylist?.id} $mustBeId ${firstPlaylist?.id} ${firstPlaylist?.snippet?.title}")
+            Log.d(
+                TAG,
+                "logListSongsTitlesOfOnePlaylist: ${mustBeId == firstPlaylist?.id} $mustBeId ${firstPlaylist?.id} ${firstPlaylist?.snippet?.title}"
+            )
 
             val listOfSongs =
-                firstPlaylist?.id?.let { youTubeApiClient?.getSongsTitlesFromPlaylist(it) }
+                firstPlaylist?.id?.let { youTubeApiClient?.getAllSongsTitlesFromPlaylist(it) }
             Log.d(TAG, "list $listOfSongs")
             launch(Dispatchers.Main) {
                 listOfSongs?.forEach { Log.d("ttt", "- $it") }
@@ -67,7 +71,7 @@ class WorkerWithApiClient {
                 myPlaylistsTitles?.add(playlistTitle)
                 myPlaylistsTitlesAndIDs?.put(playlistTitle, playlistId)
 
-                val listSongsID = youTubeApiClient?.getSongsIDFromPlaylist(playlistId)
+                val listSongsID = youTubeApiClient?.getAllSongsIDFromPlaylist(playlistId)
                 val listSongsIDsToString = listSongsID?.let { serializeListToString(it) }
                 launch(Dispatchers.Main) {
                     putStringToShared(playlistTitle, listSongsIDsToString)
@@ -109,7 +113,7 @@ class WorkerWithApiClient {
                     songsIDsListMustBeString?.let { deserializeStringToList(it) }
 
                 val songsIDsListFromAPI = playlistId?.let {
-                    youTubeApiClient?.getSongsIDFromPlaylist(it)
+                    youTubeApiClient?.getAllSongsIDFromPlaylist(it)
                 }
                 songsIDsListMustBe?.forEach { oneSongID ->
                     songsIDsListFromAPI?.let {
@@ -124,6 +128,39 @@ class WorkerWithApiClient {
         }
     }
 
+    fun getListUniqueVideos() {
+        MainScope().launch(Dispatchers.IO) {
+            isYouTubeApiClientNull()
+            val listUniqueVideosIDs = mutableListOf<String>()
+           // val listAllVideosIDS = mutableListOf<String>()
+            val playlists = youTubeApiClient?.getAllPlaylists()
+            playlists?.forEach { playlist ->
+                val playlistID = playlist.id
+                val playlistsVideosIDs = youTubeApiClient?.getAllSongsIDFromPlaylist(playlistID)
+                playlistsVideosIDs?.let { list ->
+                    list.forEach { videoID ->
+                       // listAllVideosIDS.add(videoID)
+                        if (!listUniqueVideosIDs.contains(videoID)) {
+                            listUniqueVideosIDs.add(videoID)
+                        }
+                    }
+                }
+            }
+           // Log.d(TAG, "getListUniqueVideos: all video size - ${listAllVideosIDS.size}")
+//            Log.d(TAG, "getListUniqueVideos: unique video size - ${listUniqueVideosIDs.size}")
+//            listUniqueVideosIDs.forEach { videoID ->
+//                val videoTitle = youTubeApiClient?.getVideoTitleById(videoID)
+//                Log.d(TAG, "getListUniqueVideos: $videoTitle")
+//            }
+        }
+    }
+
+    //
+    //
+    //
+    //
+    //
+    // допоміжні методи
     private fun putStringToShared(name: String, string: String?) {
         authenticationImplementer.activity.application.getSharedPreferences(
             Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE

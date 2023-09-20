@@ -13,7 +13,7 @@ import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.example.likeyoutube.Constants
 import com.example.likeyoutube.MainActivity
 import com.example.likeyoutube.R
-import com.example.likeyoutube.WorkerWithApiClient
+import com.example.likeyoutube.internet.WorkerWithApiClient
 import com.example.likeyoutube.databinding.FragmentHomeBinding
 import com.example.likeyoutube.internet.AuthenticationImplementer
 
@@ -55,6 +55,10 @@ class HomeFragment : Fragment() {
 
         fragmentHomeBinding.buttonSaveMyPlaylists.setOnClickListener {
             workerWithApiClient.saveMyPlaylists()
+        }
+
+        fragmentHomeBinding.buttonUniqueVideos.setOnClickListener {
+            workerWithApiClient.getListUniqueVideos()
         }
 
         fragmentHomeBinding.buttonRestoreMyPlaylists.setOnClickListener{

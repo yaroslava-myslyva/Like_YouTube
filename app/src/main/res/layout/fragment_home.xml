@@ -12,16 +12,16 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Save my playlists"
-        app:layout_constraintBottom_toTopOf="@id/button_delete_one_song"
+        app:layout_constraintBottom_toTopOf="@id/button_unique_videos"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
-        android:id="@+id/button_delete_one_song"
+        android:id="@+id/button_unique_videos"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Delete one song"
+        android:text="Unique videos"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -35,6 +35,6 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/button_delete_one_song" />
+        app:layout_constraintTop_toBottomOf="@id/button_unique_videos" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
