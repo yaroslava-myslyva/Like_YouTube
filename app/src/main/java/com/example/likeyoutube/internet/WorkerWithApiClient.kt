@@ -161,7 +161,7 @@ class WorkerWithApiClient {
         MainScope().launch(Dispatchers.IO) {
             isYouTubeApiClientNull()
             val listUniqueVideosIDs = mutableListOf<String>()
-        //    val listDeleteVideosTitles = mutableListOf<String>()
+            //    val listDeleteVideosTitles = mutableListOf<String>()
             val playlists = youTubeApiClient?.getAllPlaylists()
             playlists?.forEach { playlist ->
                 val playlistID = playlist.id
@@ -174,8 +174,9 @@ class WorkerWithApiClient {
                         } else { // якщо містить
 //                            val videoTitle = youTubeApiClient?.getVideoTitleById(videoID)
 //                            videoTitle?.let{listDeleteVideosTitles.add(it)}
-                            val playlistItemID = youTubeApiClient?.findPlaylistItemId(playlistID, videoID)
-                            playlistItemID?.let{youTubeApiClient?.deleteVideoFromPlaylist(it)}
+                            val playlistItemID =
+                                youTubeApiClient?.findPlaylistItemId(playlistID, videoID)
+                            playlistItemID?.let { youTubeApiClient?.deleteVideoFromPlaylist(it) }
                         }
                     }
                 }

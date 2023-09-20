@@ -2,6 +2,7 @@ package com.example.likeyoutube.fragment
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
@@ -12,10 +13,13 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.example.likeyoutube.Constants
 import com.example.likeyoutube.MainActivity
+import com.example.likeyoutube.MainActivity.Companion.TAG
 import com.example.likeyoutube.R
 import com.example.likeyoutube.internet.WorkerWithApiClient
 import com.example.likeyoutube.databinding.FragmentHomeBinding
 import com.example.likeyoutube.internet.AuthenticationImplementer
+import com.example.likeyoutube.randomizer.RandomizerWithPriorities
+import com.example.likeyoutube.randomizer.VideoIdAndPriority
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 
@@ -71,7 +75,6 @@ class HomeFragment : Fragment() {
             }
         }
 
-
         val popupMenu = PopupMenu(mainActivity, mainActivity.activityMainBinding.userProfileImage)
         popupMenu.menuInflater.inflate(R.menu.from_user_url, popupMenu.menu)
         popupMenu.setOnMenuItemClickListener(object : PopupMenu.OnMenuItemClickListener {
@@ -81,5 +84,20 @@ class HomeFragment : Fragment() {
             }
         })
         mainActivity.activityMainBinding.userProfileImage.setOnClickListener { popupMenu.show() }
+
+
+        tsiatsia()
+    }
+
+    private fun tsiatsia() {
+        val list = mutableListOf<VideoIdAndPriority>(
+            VideoIdAndPriority("id1", 3),
+            VideoIdAndPriority("id2", 3),
+            VideoIdAndPriority("id3", 3)
+        )
+        val rand = RandomizerWithPriorities()
+        val result = rand.randomize(list)
+
+
     }
 }
