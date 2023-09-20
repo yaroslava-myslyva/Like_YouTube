@@ -9,6 +9,7 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class WorkerWithApiClient {
     private val authenticationImplementer = AuthenticationImplementer.getInctance()
@@ -128,30 +129,31 @@ class WorkerWithApiClient {
         }
     }
 
-    fun getListUniqueVideos() {
-        MainScope().launch(Dispatchers.IO) {
+    suspend fun getListUniqueVideos(): MutableList<String> {
+        return withContext(Dispatchers.IO){
             isYouTubeApiClientNull()
             val listUniqueVideosIDs = mutableListOf<String>()
-           // val listAllVideosIDS = mutableListOf<String>()
+            // val listAllVideosIDS = mutableListOf<String>()
             val playlists = youTubeApiClient?.getAllPlaylists()
             playlists?.forEach { playlist ->
                 val playlistID = playlist.id
                 val playlistsVideosIDs = youTubeApiClient?.getAllSongsIDFromPlaylist(playlistID)
                 playlistsVideosIDs?.let { list ->
                     list.forEach { videoID ->
-                       // listAllVideosIDS.add(videoID)
+                        // listAllVideosIDS.add(videoID)
                         if (!listUniqueVideosIDs.contains(videoID)) {
                             listUniqueVideosIDs.add(videoID)
                         }
                     }
                 }
             }
-           // Log.d(TAG, "getListUniqueVideos: all video size - ${listAllVideosIDS.size}")
+            // Log.d(TAG, "getListUniqueVideos: all video size - ${listAllVideosIDS.size}")
 //            Log.d(TAG, "getListUniqueVideos: unique video size - ${listUniqueVideosIDs.size}")
 //            listUniqueVideosIDs.forEach { videoID ->
 //                val videoTitle = youTubeApiClient?.getVideoTitleById(videoID)
 //                Log.d(TAG, "getListUniqueVideos: $videoTitle")
 //            }
+            listUniqueVideosIDs
         }
     }
 

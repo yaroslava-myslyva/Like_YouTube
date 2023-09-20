@@ -16,6 +16,8 @@ import com.example.likeyoutube.R
 import com.example.likeyoutube.internet.WorkerWithApiClient
 import com.example.likeyoutube.databinding.FragmentHomeBinding
 import com.example.likeyoutube.internet.AuthenticationImplementer
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 
 
 class HomeFragment : Fragment() {
@@ -58,7 +60,9 @@ class HomeFragment : Fragment() {
         }
 
         fragmentHomeBinding.buttonUniqueVideos.setOnClickListener {
-            workerWithApiClient.getListUniqueVideos()
+            MainScope().launch {
+                workerWithApiClient.getListUniqueVideos()
+            }
         }
 
         fragmentHomeBinding.buttonRestoreMyPlaylists.setOnClickListener{
