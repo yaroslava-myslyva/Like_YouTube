@@ -39,13 +39,16 @@ class WorkerWithApiClient {
         MainScope().launch(Dispatchers.IO) {
             isYouTubeApiClientNull()
             val list = youTubeApiClient?.getAllPlaylists()
-            val firstPlaylist = list?.first()
+            val firstPlaylist = list?.get(1)
+            val myPlaylistsTitlesAndIDsString = getStringFromShared(Constants.DATA_PLAYLISTS_TITLES_AND_IDS)
+            myPlaylistsTitlesAndIDs = myPlaylistsTitlesAndIDsString?.let { deserializeStringToMap(it) }
+            val mustBeId = myPlaylistsTitlesAndIDs?.get("1")
+            Log.d(TAG, "logListSongsTitlesOfOnePlaylist: ${mustBeId == firstPlaylist?.id} $mustBeId ${firstPlaylist?.id} ${firstPlaylist?.snippet?.title}")
 
             val listOfSongs =
                 firstPlaylist?.id?.let { youTubeApiClient?.getSongsTitlesFromPlaylist(it) }
             Log.d(TAG, "list $listOfSongs")
             launch(Dispatchers.Main) {
-                Log.d(TAG, "number ${listOfSongs?.size}")
                 listOfSongs?.forEach { Log.d("ttt", "- $it") }
             }
         }
@@ -66,9 +69,6 @@ class WorkerWithApiClient {
 
                 val listSongsID = youTubeApiClient?.getSongsIDFromPlaylist(playlistId)
                 val listSongsIDsToString = listSongsID?.let { serializeListToString(it) }
-
-                Log.d(TAG, "saveMyPlaylists: listSongsIDsToString $listSongsIDsToString")
-
                 launch(Dispatchers.Main) {
                     putStringToShared(playlistTitle, listSongsIDsToString)
                 }
@@ -79,12 +79,6 @@ class WorkerWithApiClient {
                 val myPlaylistsTitlesAndIDsToString = myPlaylistsTitlesAndIDs?.let {
                     serializeMapToString(it)
                 }
-
-                Log.d(TAG, "saveMyPlaylists: myPlaylistsTitlesToString $myPlaylistsTitlesToString")
-                Log.d(
-                    TAG,
-                    "saveMyPlaylists: myPlaylistsTitlesAndIDsToString $myPlaylistsTitlesAndIDsToString"
-                )
 
                 putStringToShared(Constants.DATA_PLAYLISTS_TITLES, myPlaylistsTitlesToString)
                 putStringToShared(
@@ -105,9 +99,29 @@ class WorkerWithApiClient {
         myPlaylistsTitlesAndIDs = myPlaylistsTitlesAndIDsString?.let {
             deserializeStringToMap(it)
         }
-        Log.d(TAG, "restoreMyPlaylists: $myPlaylistsTitlesString")
-        Log.d(TAG, "restoreMyPlaylists: $myPlaylistsTitlesAndIDs")
+        MainScope().launch(Dispatchers.IO) {
+            isYouTubeApiClientNull()
+            myPlaylistsTitles?.forEach { title ->
+                val playlistId = myPlaylistsTitlesAndIDs?.get(title)
+                Log.d(TAG, "restoreMyPlaylists: playlistId - $playlistId")
+                val songsIDsListMustBeString = getStringFromShared(title)
+                val songsIDsListMustBe =
+                    songsIDsListMustBeString?.let { deserializeStringToList(it) }
 
+                val songsIDsListFromAPI = playlistId?.let {
+                    youTubeApiClient?.getSongsIDFromPlaylist(it)
+                }
+                songsIDsListMustBe?.forEach { oneSongID ->
+                    songsIDsListFromAPI?.let {
+                        if (!it.contains(oneSongID)) {
+                            youTubeApiClient?.addVideoToPlaylist(playlistId, oneSongID)
+                            val songTitle = youTubeApiClient?.getVideoTitleById(oneSongID)
+                            Log.d(TAG, "restoreMyPlaylists: немає $songTitle, додаю")
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun putStringToShared(name: String, string: String?) {
@@ -115,6 +129,7 @@ class WorkerWithApiClient {
             Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
         ).edit().putString(name, string).apply()
     }
+
     private fun getStringFromShared(name: String): String? {
         return authenticationImplementer.activity.application.getSharedPreferences(
             Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE

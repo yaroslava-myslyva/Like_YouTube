@@ -1,16 +1,17 @@
 package com.example.likeyoutube.internet
 
 import android.content.Context
+import android.util.Log
+import com.example.likeyoutube.MainActivity.Companion.TAG
 import com.example.likeyoutube.R
+import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.http.HttpRequestInitializer
 import com.google.api.client.http.HttpTransport
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.youtube.YouTube
-import com.google.api.services.youtube.model.Playlist
-import com.google.api.services.youtube.model.PlaylistItem
-import com.google.api.services.youtube.model.PlaylistItemSnippet
-import com.google.api.services.youtube.model.ResourceId
+import com.google.api.services.youtube.model.*
+import java.io.IOException
 
 class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
     private var mYouTube: YouTube
@@ -88,7 +89,7 @@ class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
 
             if (playlistItems != null) {
                 for (playlistItem in playlistItems) {
-                    val videoId = playlistItem.id
+                    val videoId = playlistItem.snippet.resourceId.videoId
                     ids.add(videoId)
                 }
             }
@@ -104,17 +105,49 @@ class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
         playlistItemsDeleteRequest.execute()
     }
 
-    fun addVideoToPlaylist(playlistId: String, videoId: String) {
-        val playlistItem = PlaylistItem()
-        val snippet = PlaylistItemSnippet()
-        snippet.playlistId = playlistId
-        snippet.resourceId = ResourceId()
-        snippet.resourceId.kind = "youtube#video"
-        snippet.resourceId.videoId = videoId
-        playlistItem.snippet = snippet
+    fun addVideoToPlaylist(playlistId: String, videoId: String): Boolean {
+        try {
+            // Створюємо об'єкт PlaylistItem
+            val playlistItem = PlaylistItem()
+            val snippet = PlaylistItemSnippet()
 
-        val playlistItemsInsertRequest = mYouTube.playlistItems().insert("snippet", playlistItem)
-        val response = playlistItemsInsertRequest.execute()
+            val resourceId = ResourceId()
+            resourceId.kind = "youtube#video"
+            resourceId.videoId = videoId
 
+            snippet.resourceId = resourceId
+            snippet.playlistId = playlistId
+            playlistItem.snippet = snippet
+
+            // Викликаємо YouTube Data API для додавання відео до плейлиста
+            mYouTube.playlistItems().insert("snippet", playlistItem).execute()
+
+            return true // Відео було успішно додано до плейлиста
+        } catch (e: IOException) {
+            e.printStackTrace()
+            return false // Відео не було додано до плейлиста через помилку
+        }
+
+    }
+
+    fun getVideoTitleById(videoId: String): String? {
+        try {
+            val videoListResponse = mYouTube.videos().list("snippet")
+                .setId(videoId)
+                .execute()
+
+            val videoList = videoListResponse.items
+
+            if (videoList != null && videoList.isNotEmpty()) {
+                val video = videoList[0]
+                return video.snippet.title
+            }
+        } catch (e: GoogleJsonResponseException) {
+            e.printStackTrace()
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+
+        return null
     }
 }
