@@ -54,20 +54,23 @@ class HomeFragment : Fragment() {
             .into(mainActivity.activityMainBinding.userProfileImage)
 
 
-
-        fragmentHomeBinding.buttonSaveMyPlaylists.setOnClickListener {
-            workerWithApiClient.saveMyPlaylists()
-        }
-
-        fragmentHomeBinding.buttonUniqueVideos.setOnClickListener {
-            MainScope().launch {
-                workerWithApiClient.getListUniqueVideos()
+        with(fragmentHomeBinding) {
+            buttonSaveMyPlaylists.setOnClickListener {
+                workerWithApiClient.saveMyPlaylists()
+            }
+            buttonUniqueVideos.setOnClickListener {
+                MainScope().launch {
+                    workerWithApiClient.getListUniqueVideos()
+                }
+            }
+            buttonDeleteDuplicates.setOnClickListener {
+                workerWithApiClient.deleteDuplicates()
+            }
+            buttonRestoreMyPlaylists.setOnClickListener {
+                workerWithApiClient.restoreMyPlaylists()
             }
         }
 
-        fragmentHomeBinding.buttonRestoreMyPlaylists.setOnClickListener{
-            workerWithApiClient.restoreMyPlaylists()
-        }
 
         val popupMenu = PopupMenu(mainActivity, mainActivity.activityMainBinding.userProfileImage)
         popupMenu.menuInflater.inflate(R.menu.from_user_url, popupMenu.menu)

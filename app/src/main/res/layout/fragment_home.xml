@@ -28,6 +28,16 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
+        android:id="@+id/button_delete_duplicates"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Delete duplicates"
+        app:layout_constraintTop_toBottomOf="@id/button_unique_videos"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/button_restore_my_playlists" />
+
+    <Button
         android:id="@+id/button_restore_my_playlists"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -35,6 +45,6 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/button_unique_videos" />
+        app:layout_constraintTop_toBottomOf="@id/button_delete_duplicates" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -130,7 +130,7 @@ class WorkerWithApiClient {
     }
 
     suspend fun getListUniqueVideos(): MutableList<String> {
-        return withContext(Dispatchers.IO){
+        return withContext(Dispatchers.IO) {
             isYouTubeApiClientNull()
             val listUniqueVideosIDs = mutableListOf<String>()
             // val listAllVideosIDS = mutableListOf<String>()
@@ -157,12 +157,42 @@ class WorkerWithApiClient {
         }
     }
 
+    fun deleteDuplicates() {
+        MainScope().launch(Dispatchers.IO) {
+            isYouTubeApiClientNull()
+            val listUniqueVideosIDs = mutableListOf<String>()
+        //    val listDeleteVideosTitles = mutableListOf<String>()
+            val playlists = youTubeApiClient?.getAllPlaylists()
+            playlists?.forEach { playlist ->
+                val playlistID = playlist.id
+                val playlistsVideosIDs = youTubeApiClient?.getAllSongsIDFromPlaylist(playlistID)
+                playlistsVideosIDs?.let { list ->
+                    list.forEach { videoID ->
+                        // якщо не містить
+                        if (!listUniqueVideosIDs.contains(videoID)) {
+                            listUniqueVideosIDs.add(videoID)
+                        } else { // якщо містить
+//                            val videoTitle = youTubeApiClient?.getVideoTitleById(videoID)
+//                            videoTitle?.let{listDeleteVideosTitles.add(it)}
+                            val playlistItemID = youTubeApiClient?.findPlaylistItemId(playlistID, videoID)
+                            playlistItemID?.let{youTubeApiClient?.deleteVideoFromPlaylist(it)}
+                        }
+                    }
+                }
+            }
+//            listDeleteVideosTitles.forEach { videoTitle ->
+//                Log.d(TAG, "deleteDuplicates: $videoTitle")
+//            }
+        }
+
+    }
+
     //
-    //
-    //
-    //
-    //
-    // допоміжні методи
+//
+//
+//
+//
+// допоміжні методи
     private fun putStringToShared(name: String, string: String?) {
         authenticationImplementer.activity.application.getSharedPreferences(
             Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
@@ -197,6 +227,4 @@ class WorkerWithApiClient {
         val mapType = object : TypeToken<MutableMap<String, String>>() {}.type
         return gson.fromJson(jsonString, mapType)
     }
-
-
 }

@@ -98,9 +98,28 @@ class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
         return ids
     }
 
+    fun findPlaylistItemId(playlistId: String, videoId: String): String? {
+        try {
+            val playlistItemsResponse = mYouTube.playlistItems().list("id")
+                .setPlaylistId(playlistId)
+                .setVideoId(videoId)
+                .execute()
+
+            if (playlistItemsResponse.items.isNotEmpty()) {
+                return playlistItemsResponse.items[0].id
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        return null
+    }
+
     fun deleteVideoFromPlaylist(playlistItemId: String) {
-        val playlistItemsDeleteRequest = mYouTube.playlistItems().delete(playlistItemId)
-        playlistItemsDeleteRequest.execute()
+        try {
+            mYouTube.playlistItems().delete(playlistItemId).execute()
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
     }
 
     fun addVideoToPlaylist(playlistId: String, videoId: String): Boolean {
