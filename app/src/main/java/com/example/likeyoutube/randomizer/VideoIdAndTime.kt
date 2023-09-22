@@ -4,6 +4,6 @@ import java.util.*
 
 data class VideoIdAndTime(
     val videoID :String,
-    val lastListening : Date? = null
+    var lastListening : Date? = null
    // val priority: Int = 2
 )

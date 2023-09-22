@@ -16,6 +16,7 @@ class Constants {
         val DATA_EMAIL = "email"
         val DATA_PLAYLISTS_TITLES = "playlists_titles"
         val DATA_PLAYLISTS_TITLES_AND_IDS = "playlists_titles_and_ids"
+        val DATA_BIG_LIST = "big_list"
 
         val CLIENT_ID = "812820590609-t2kgrbk4esfncnimvghmc1ah41222fpl.apps.googleusercontent.com" //android
         val CODE_VERIFIER_CHALLENGE_METHOD = "S256"

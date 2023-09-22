@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
+import com.example.likeyoutube.app.LikeYouTubeApplication
 import com.example.likeyoutube.databinding.ActivityMainBinding
 import com.example.likeyoutube.fragment.HomeFragment
 import com.example.likeyoutube.fragment.SignInFragment
@@ -48,8 +49,10 @@ class MainActivity : AppCompatActivity() {
         fragmentTransaction.replace(activityMainBinding.fragment.id, fragment)
         fragmentTransaction.commit()
     }
-companion object{
-    val TAG = "ttt"
-}
+
+    companion object {
+        val TAG = "ttt"
+       // val application = LikeYouTubeApplication()
+    }
 }
 

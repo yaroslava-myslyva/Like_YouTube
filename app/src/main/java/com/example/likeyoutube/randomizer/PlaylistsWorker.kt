@@ -1,19 +1,61 @@
 package com.example.likeyoutube.randomizer
 
+import android.content.Context
 import android.util.Log
+import com.example.likeyoutube.Constants
+import com.example.likeyoutube.MainActivity
 import com.example.likeyoutube.MainActivity.Companion.TAG
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import java.util.Date
 import kotlin.random.Random
 
 
 class PlaylistsWorker {
-    // збереження списку
-    // діставання списку
-    // перенесення першого елементу в кінець
-    // зміна приорітету пісні зі зміною кількості цієї пісні в списку
+    private lateinit var activity: MainActivity
 
-    //а понижение приоритета, если я не хочу сейчас слушать -
-    // пусть элемент посмотрит на дату и время у элемента на 100 позиций в списке ниже,
-    // если такого нету - на дату и время последнего элемента и сделает себе такой же + 0-100рандомных милисекунд
+    fun setActivity(activity: MainActivity) {
+        this.activity = activity
+    }
+
+    fun movingFirstToEnd(bigList: MutableList<VideoIdAndTime>): MutableList<VideoIdAndTime> {
+        val firstElement = bigList.removeAt(0)
+        bigList.add(firstElement)
+        return bigList
+    }
+
+    fun getBigListFromShared(): MutableList<VideoIdAndTime> {
+        val jsonString = activity.application.getSharedPreferences(
+            Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
+        ).getString(Constants.DATA_BIG_LIST, null)
+        val gson = Gson()
+        val listType = object : TypeToken<MutableList<VideoIdAndTime>>() {}.type
+        return gson.fromJson(jsonString, listType)
+    }
+
+
+    fun saveBigList(bigList: MutableList<VideoIdAndTime>) {
+        val gson = Gson()
+        val jsonString = gson.toJson(bigList)
+        activity.application
+            .getSharedPreferences(
+                Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
+            )
+            .edit().putString(Constants.DATA_BIG_LIST, jsonString).apply()
+    }
+
+    fun decreasingPriority(element: VideoIdAndTime, allList: MutableList<VideoIdAndTime>) : MutableList<VideoIdAndTime> {
+        allList.remove(element)
+        val date = allList[99].lastListening ?: allList.last().lastListening
+        var newDate = Date()
+        if (date != null) {
+            newDate = Date(date.time.plus(Random.nextInt(0, 101)))
+        }
+        element.lastListening = newDate
+        allList.add(element)
+        return randomize(allList)
+    }
+
     fun randomize(list: MutableList<VideoIdAndTime>): MutableList<VideoIdAndTime> {
         val listResult = mutableListOf<VideoIdAndTime>()
         val listNulls = mutableListOf<VideoIdAndTime>()
@@ -41,7 +83,8 @@ class PlaylistsWorker {
         val otFonaria = 30
         var groupsMax = list.size / otFonaria
         groupsMax = if (groupsMax < 1) 1 else groupsMax
-        var groupsNumber = Random.nextInt(groupsMax.coerceAtMost(from), groupsMax.coerceAtLeast(from) + 1)
+        var groupsNumber =
+            Random.nextInt(groupsMax.coerceAtMost(from), groupsMax.coerceAtLeast(from) + 1)
         Log.d(TAG, "randomize: groupsNumber = $groupsNumber")
         groupsNumber = if (groupsNumber < 1) 1 else groupsNumber
         var quantityInOneGroup = list.size / groupsNumber

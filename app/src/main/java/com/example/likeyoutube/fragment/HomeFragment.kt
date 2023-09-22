@@ -30,6 +30,7 @@ class HomeFragment : Fragment() {
     private lateinit var fragmentHomeBinding: FragmentHomeBinding
     private val authenticationImplementer = AuthenticationImplementer.getInctance()
     private val workerWithApiClient = WorkerWithApiClient()
+    private lateinit var mainActivity: MainActivity
 
 
     override fun onCreateView(
@@ -41,7 +42,7 @@ class HomeFragment : Fragment() {
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        val mainActivity = activity as MainActivity
+        mainActivity = activity as MainActivity
         val firstName = mainActivity.getSharedPreferences(
             Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
         ).getString(Constants.DATA_FIRST_NAME, "")
@@ -114,6 +115,7 @@ class HomeFragment : Fragment() {
             VideoIdAndTime("18", dateFormat.parse("2023-04-05")),
         )
         val playlistsWorker = PlaylistsWorker()
+        playlistsWorker.setActivity(mainActivity)
         val result = playlistsWorker.randomize(list)
         Log.d(TAG, "tsiatsia: size ${list.size} ${result.size}")
         result.forEach {
