@@ -47,6 +47,19 @@ class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
         return playlists
     }
 
+    fun getPlaylistById(playlistId: String): Playlist? {
+        try {
+            val playlistRequest = mYouTube.playlists().list("snippet").setId(playlistId)
+            val playlistResponse = playlistRequest.execute()
+            val playlists = playlistResponse.items
+            if (playlists.isNotEmpty()) {
+                return playlists[0]
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return null
+    }
 
     fun getAllSongsTitlesFromPlaylist(playlistId: String): MutableList<String>? {
         val songs = mutableListOf<String>()

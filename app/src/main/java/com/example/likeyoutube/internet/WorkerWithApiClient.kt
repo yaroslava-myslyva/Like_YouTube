@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.example.likeyoutube.Constants
 import com.example.likeyoutube.MainActivity.Companion.TAG
+import com.google.api.services.youtube.model.Playlist
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
@@ -23,15 +24,11 @@ class WorkerWithApiClient {
         }
     }
 
-    fun logAllPlaylistsTitles() {
-        MainScope().launch(Dispatchers.IO) {
+    suspend fun getAllPlaylists(): MutableList<Playlist> {
+        return withContext(Dispatchers.IO) {
             isYouTubeApiClientNull()
             val list = youTubeApiClient?.getAllPlaylists()
-            Log.d(TAG, "list $list")
-            launch(Dispatchers.Main) {
-                Log.d(TAG, "number ${list?.size}")
-                list?.forEach { Log.d("ttt", "title - ${it.snippet.title}") }
-            }
+            list ?: mutableListOf<Playlist>()
         }
     }
 
@@ -129,7 +126,7 @@ class WorkerWithApiClient {
         }
     }
 
-    suspend fun getListUniqueVideos(): MutableList<String> {
+    suspend fun getListUniqueVideosFromAllPlaylists(): MutableList<String> {
         return withContext(Dispatchers.IO) {
             isYouTubeApiClientNull()
             val listUniqueVideosIDs = mutableListOf<String>()

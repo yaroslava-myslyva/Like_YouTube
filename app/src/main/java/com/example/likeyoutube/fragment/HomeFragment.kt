@@ -9,6 +9,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.PopupMenu
 import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.example.likeyoutube.Constants
@@ -20,6 +22,7 @@ import com.example.likeyoutube.databinding.FragmentHomeBinding
 import com.example.likeyoutube.internet.AuthenticationImplementer
 import com.example.likeyoutube.randomizer.PlaylistsWorker
 import com.example.likeyoutube.randomizer.VideoIdAndTime
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -59,15 +62,11 @@ class HomeFragment : Fragment() {
             .transition(DrawableTransitionOptions.withCrossFade(1500))
             .into(mainActivity.activityMainBinding.userProfileImage)
 
+        setRecyclerView()
 
         with(fragmentHomeBinding) {
             buttonSaveMyPlaylists.setOnClickListener {
                 workerWithApiClient.saveMyPlaylists()
-            }
-            buttonUniqueVideos.setOnClickListener {
-                MainScope().launch {
-                    workerWithApiClient.getListUniqueVideos()
-                }
             }
             buttonDeleteDuplicates.setOnClickListener {
                 workerWithApiClient.deleteDuplicates()
@@ -88,7 +87,22 @@ class HomeFragment : Fragment() {
         mainActivity.activityMainBinding.userProfileImage.setOnClickListener { popupMenu.show() }
 
 
-        tsiatsia()
+        //  tsiatsia()
+    }
+
+    private fun setRecyclerView() {
+        MainScope().launch(Dispatchers.IO) {
+            val list = workerWithApiClient.getAllPlaylists()
+            launch(Dispatchers.Main) {
+                val playlistsAdapter = PlaylistsAdapter()
+                playlistsAdapter.setList(list)
+                with(fragmentHomeBinding.recyclerPlaylists) {
+                    adapter = playlistsAdapter
+                    layoutManager = LinearLayoutManager(context)
+                }
+
+            }
+        }
     }
 
     private fun tsiatsia() {
