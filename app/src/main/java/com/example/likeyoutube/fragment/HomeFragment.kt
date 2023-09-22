@@ -18,10 +18,11 @@ import com.example.likeyoutube.R
 import com.example.likeyoutube.internet.WorkerWithApiClient
 import com.example.likeyoutube.databinding.FragmentHomeBinding
 import com.example.likeyoutube.internet.AuthenticationImplementer
-import com.example.likeyoutube.randomizer.RandomizerWithPriorities
-import com.example.likeyoutube.randomizer.VideoIdAndPriority
+import com.example.likeyoutube.randomizer.PlaylistsWorker
+import com.example.likeyoutube.randomizer.VideoIdAndTime
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
 
 
 class HomeFragment : Fragment() {
@@ -90,14 +91,34 @@ class HomeFragment : Fragment() {
     }
 
     private fun tsiatsia() {
-        val list = mutableListOf<VideoIdAndPriority>(
-            VideoIdAndPriority("id1", 3),
-            VideoIdAndPriority("id2", 3),
-            VideoIdAndPriority("id3", 3)
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd")
+        dateFormat.parse("2023-04-05")
+        val list = mutableListOf<VideoIdAndTime>(
+            VideoIdAndTime("1", dateFormat.parse("2023-01-05")),
+            VideoIdAndTime("2"),
+            VideoIdAndTime("3"),
+            VideoIdAndTime("4"),
+            VideoIdAndTime("5"),
+            VideoIdAndTime("6"),
+            VideoIdAndTime("7"),
+            VideoIdAndTime("8"),
+            VideoIdAndTime("9"),
+            VideoIdAndTime("10"),
+            VideoIdAndTime("11"),
+            VideoIdAndTime("12"),
+            VideoIdAndTime("13"),
+            VideoIdAndTime("14"),
+            VideoIdAndTime("15"),
+            VideoIdAndTime("16", dateFormat.parse("2023-02-05")),
+            VideoIdAndTime("17", dateFormat.parse("2023-03-05")),
+            VideoIdAndTime("18", dateFormat.parse("2023-04-05")),
         )
-        val rand = RandomizerWithPriorities()
-        val result = rand.randomize(list)
-
+        val playlistsWorker = PlaylistsWorker()
+        val result = playlistsWorker.randomize(list)
+        Log.d(TAG, "tsiatsia: size ${list.size} ${result.size}")
+        result.forEach {
+            Log.d(TAG, "tsiatsia: ${it.videoID}")
+        }
 
     }
 }
