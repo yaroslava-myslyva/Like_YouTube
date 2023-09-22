@@ -11,15 +11,9 @@ class PlaylistsWorker {
     // перенесення першого елементу в кінець
     // зміна приорітету пісні зі зміною кількості цієї пісні в списку
 
-
-    //давай пусть налл и не налл по отдельности делится на рандомное число групп от 10 до Х=кол-во_песен_в_налл/неналл / 30)
-    //(я не знаю почему 30)
-    //т.е. допустим у меня неналл 1250 песен, значит будет рандомное кол-во групп от 10 до 1250/30=42
-    //у каждой группы порядковый номер, мы их потом по порядку клеим
-    //отрандомили группы и клеим назад
-    //
-    //потом склеить все группы по порядку, сначала налл все отрандомизированные группы, потом неналл всеотрандомизированные группы
-    //
+    //а понижение приоритета, если я не хочу сейчас слушать -
+    // пусть элемент посмотрит на дату и время у элемента на 100 позиций в списке ниже,
+    // если такого нету - на дату и время последнего элемента и сделает себе такой же + 0-100рандомных милисекунд
     fun randomize(list: MutableList<VideoIdAndTime>): MutableList<VideoIdAndTime> {
         val listResult = mutableListOf<VideoIdAndTime>()
         val listNulls = mutableListOf<VideoIdAndTime>()
@@ -46,27 +40,20 @@ class PlaylistsWorker {
         val from = 10
         val otFonaria = 30
         var groupsMax = list.size / otFonaria
-        if (groupsMax < 1) {
-            groupsMax = 1
-        }
-        var groupsNumber = if (from < groupsMax) {
-            Random.nextInt(from, groupsMax + 1)
-        } else if (groupsMax < from) {
-            Random.nextInt(groupsMax, from + 1)
-        } else from
+        groupsMax = if (groupsMax < 1) 1 else groupsMax
+        var groupsNumber = Random.nextInt(groupsMax.coerceAtMost(from), groupsMax.coerceAtLeast(from) + 1)
         Log.d(TAG, "randomize: groupsNumber = $groupsNumber")
-        if(groupsNumber < 1){
-            groupsNumber = 1
-        }
+        groupsNumber = if (groupsNumber < 1) 1 else groupsNumber
         var quantityInOneGroup = list.size / groupsNumber
-        if (quantityInOneGroup < 2) {
-            quantityInOneGroup = 2
-        }
+        quantityInOneGroup = if (quantityInOneGroup < 2) 2 else quantityInOneGroup
         Log.d(TAG, "randomize: quantityInOneGroup = $quantityInOneGroup")
         var currentIndex = 0
         while (currentIndex < list.size) {
             val chunk =
-                list.subList(currentIndex, kotlin.math.min(currentIndex + quantityInOneGroup, list.size))
+                list.subList(
+                    currentIndex,
+                    kotlin.math.min(currentIndex + quantityInOneGroup, list.size)
+                )
             chunk.shuffle()
             result.add(chunk)
             currentIndex += quantityInOneGroup
