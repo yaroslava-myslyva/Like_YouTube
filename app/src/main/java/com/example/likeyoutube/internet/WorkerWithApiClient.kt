@@ -1,5 +1,6 @@
 package com.example.likeyoutube.internet
 
+import android.app.ProgressDialog
 import android.content.Context
 import android.util.Log
 import com.example.likeyoutube.Constants
@@ -10,7 +11,6 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class WorkerWithApiClient {
     private val authenticationImplementer = AuthenticationImplementer.getInctance()
@@ -24,12 +24,12 @@ class WorkerWithApiClient {
         }
     }
 
-    suspend fun getAllPlaylists(): MutableList<Playlist> {
-        return withContext(Dispatchers.IO) {
+    fun getAllPlaylists(): MutableList<Playlist> {
+
             isYouTubeApiClientNull()
             val list = youTubeApiClient?.getAllPlaylists()
-            list ?: mutableListOf<Playlist>()
-        }
+            return list ?: mutableListOf<Playlist>()
+
     }
 
     fun logListSongsTitlesOfOnePlaylist() {
@@ -56,7 +56,7 @@ class WorkerWithApiClient {
         }
     }
 
-    fun saveMyPlaylists() {
+    fun saveMyPlaylists(waiting: ProgressDialog) {
         MainScope().launch(Dispatchers.IO) {
             isYouTubeApiClientNull()
             val list = youTubeApiClient?.getAllPlaylists()
@@ -87,6 +87,7 @@ class WorkerWithApiClient {
                     Constants.DATA_PLAYLISTS_TITLES_AND_IDS,
                     myPlaylistsTitlesAndIDsToString
                 )
+                waiting.cancel()
             }
         }
     }
@@ -101,7 +102,7 @@ class WorkerWithApiClient {
         myPlaylistsTitlesAndIDs = myPlaylistsTitlesAndIDsString?.let {
             deserializeStringToMap(it)
         }
-        MainScope().launch(Dispatchers.IO) {
+
             isYouTubeApiClientNull()
             myPlaylistsTitles?.forEach { title ->
                 val playlistId = myPlaylistsTitlesAndIDs?.get(title)
@@ -121,16 +122,17 @@ class WorkerWithApiClient {
                             Log.d(TAG, "restoreMyPlaylists: немає $songTitle, додаю")
                         }
                     }
-                }
+
             }
         }
     }
 
-    suspend fun getListUniqueVideosFromAllPlaylists(): MutableList<String> {
-        return withContext(Dispatchers.IO) {
+    fun getListUniqueVideosFromAllPlaylists(): MutableList<String> {
+
             isYouTubeApiClientNull()
             val listUniqueVideosIDs = mutableListOf<String>()
             // val listAllVideosIDS = mutableListOf<String>()
+
             val playlists = youTubeApiClient?.getAllPlaylists()
             playlists?.forEach { playlist ->
                 val playlistID = playlist.id
@@ -150,16 +152,24 @@ class WorkerWithApiClient {
 //                val videoTitle = youTubeApiClient?.getVideoTitleById(videoID)
 //                Log.d(TAG, "getListUniqueVideos: $videoTitle")
 //            }
-            listUniqueVideosIDs
-        }
+            return listUniqueVideosIDs
+
     }
 
-    fun deleteDuplicates() {
-        MainScope().launch(Dispatchers.IO) {
+    fun deleteDuplicates(playlistsID: MutableList<String>) {
+
             isYouTubeApiClientNull()
             val listUniqueVideosIDs = mutableListOf<String>()
-            //    val listDeleteVideosTitles = mutableListOf<String>()
-            val playlists = youTubeApiClient?.getAllPlaylists()
+            var playlists : MutableList<Playlist>?= mutableListOf()
+            if(playlistsID.isEmpty()) {
+                playlists = youTubeApiClient?.getAllPlaylists()
+            } else{
+                playlistsID.forEach { id ->
+                    val playlist = youTubeApiClient?.getPlaylistById(id)
+                    playlist?.let { playlists?.add(it) }
+                }
+            }
+
             playlists?.forEach { playlist ->
                 val playlistID = playlist.id
                 val playlistsVideosIDs = youTubeApiClient?.getAllSongsIDFromPlaylist(playlistID)
@@ -181,7 +191,7 @@ class WorkerWithApiClient {
 //            listDeleteVideosTitles.forEach { videoTitle ->
 //                Log.d(TAG, "deleteDuplicates: $videoTitle")
 //            }
-        }
+
 
     }
 

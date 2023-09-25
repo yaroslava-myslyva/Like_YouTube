@@ -1,5 +1,6 @@
 package com.example.likeyoutube.fragment
 
+import android.app.ProgressDialog
 import android.content.Context
 import android.os.Bundle
 import android.util.Log
@@ -7,9 +8,9 @@ import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.CheckBox
 import android.widget.PopupMenu
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
@@ -17,15 +18,17 @@ import com.example.likeyoutube.Constants
 import com.example.likeyoutube.MainActivity
 import com.example.likeyoutube.MainActivity.Companion.TAG
 import com.example.likeyoutube.R
-import com.example.likeyoutube.internet.WorkerWithApiClient
 import com.example.likeyoutube.databinding.FragmentHomeBinding
+import com.example.likeyoutube.internet.WorkerWithApiClient
 import com.example.likeyoutube.internet.AuthenticationImplementer
 import com.example.likeyoutube.randomizer.PlaylistsWorker
 import com.example.likeyoutube.randomizer.VideoIdAndTime
+import com.google.api.services.youtube.model.Playlist
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import kotlin.concurrent.thread
 
 
 class HomeFragment : Fragment() {
@@ -34,6 +37,7 @@ class HomeFragment : Fragment() {
     private val authenticationImplementer = AuthenticationImplementer.getInctance()
     private val workerWithApiClient = WorkerWithApiClient()
     private lateinit var mainActivity: MainActivity
+    private var list: MutableList<Playlist> = mutableListOf()
 
 
     override fun onCreateView(
@@ -46,6 +50,9 @@ class HomeFragment : Fragment() {
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         mainActivity = activity as MainActivity
+        val waiting = ProgressDialog(context)
+        waiting.show()
+
         val firstName = mainActivity.getSharedPreferences(
             Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
         ).getString(Constants.DATA_FIRST_NAME, "")
@@ -55,24 +62,31 @@ class HomeFragment : Fragment() {
         ).getString(Constants.DATA_PICTURE, "")
 
         mainActivity.activityMainBinding.userName.text = firstName
+        MainScope().launch(Dispatchers.Main) {
+            Glide.with(mainActivity)
+                .load(urlPicture)
+                .circleCrop()
+                .transition(DrawableTransitionOptions.withCrossFade(1500))
+                .into(mainActivity.activityMainBinding.userProfileImage)
 
-        Glide.with(mainActivity)
-            .load(urlPicture)
-            .circleCrop()
-            .transition(DrawableTransitionOptions.withCrossFade(1500))
-            .into(mainActivity.activityMainBinding.userProfileImage)
-
-        setRecyclerView()
+        }
+        setRecyclerView(waiting)
 
         with(fragmentHomeBinding) {
             buttonSaveMyPlaylists.setOnClickListener {
-                workerWithApiClient.saveMyPlaylists()
+                waiting.show()
+                workerWithApiClient.saveMyPlaylists(waiting)
             }
             buttonDeleteDuplicates.setOnClickListener {
-                workerWithApiClient.deleteDuplicates()
+                waiting.show()
+                deleteDuplicates(waiting)
             }
             buttonRestoreMyPlaylists.setOnClickListener {
-                workerWithApiClient.restoreMyPlaylists()
+                waiting.show()
+                thread(start = true) {
+                    workerWithApiClient.restoreMyPlaylists()
+                    waiting.cancel()
+                }
             }
         }
 
@@ -90,9 +104,9 @@ class HomeFragment : Fragment() {
         //  tsiatsia()
     }
 
-    private fun setRecyclerView() {
+    private fun setRecyclerView(waiting: ProgressDialog) {
         MainScope().launch(Dispatchers.IO) {
-            val list = workerWithApiClient.getAllPlaylists()
+            list = workerWithApiClient.getAllPlaylists()
             launch(Dispatchers.Main) {
                 val playlistsAdapter = PlaylistsAdapter()
                 playlistsAdapter.setList(list)
@@ -100,10 +114,41 @@ class HomeFragment : Fragment() {
                     adapter = playlistsAdapter
                     layoutManager = LinearLayoutManager(context)
                 }
+                waiting.cancel()
+            }
+        }
 
+    }
+
+    private fun deleteDuplicates(waiting: ProgressDialog) {
+        with(fragmentHomeBinding.recyclerPlaylists) {
+            MainScope().launch(Dispatchers.Main) {
+                val playlistsID = mutableListOf<String>()
+                for (i in 0 until childCount) {
+                    val view = getChildAt(i)
+                    val checkBox = view.findViewById<CheckBox>(R.id.item_playlists_check_box)
+
+                    if (checkBox.isChecked) {
+                        val selectedItemID = list[i].id
+                        playlistsID.add(selectedItemID)
+                    }
+                }
+                launch(Dispatchers.IO) {
+                    workerWithApiClient.deleteDuplicates(playlistsID)
+                    launch(Dispatchers.Main) {
+                        for (i in 0 until childCount) {
+                            val view = getChildAt(i)
+                            val checkBox =
+                                view.findViewById<CheckBox>(R.id.item_playlists_check_box)
+                            checkBox.isChecked = false
+                        }
+                        waiting.cancel()
+                    }
+                }
             }
         }
     }
+
 
     private fun tsiatsia() {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd")

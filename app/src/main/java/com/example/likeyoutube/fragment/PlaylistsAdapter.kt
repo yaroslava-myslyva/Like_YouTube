@@ -1,13 +1,10 @@
 package com.example.likeyoutube.fragment
 
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import androidx.core.os.bundleOf
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
-import com.example.likeyoutube.MainActivity.Companion.TAG
 import com.example.likeyoutube.databinding.ItemPlaylistsBinding
 import com.google.api.services.youtube.model.Playlist
 
@@ -29,14 +26,11 @@ class PlaylistsAdapter : RecyclerView.Adapter<PlaylistsAdapter.PlaylistViewHolde
     }
 
     override fun onBindViewHolder(holder: PlaylistViewHolder, position: Int) {
-
-        val plant = list[position]
-        holder.bind(plant)
+        val playlist = list[position]
+        holder.bind(playlist)
     }
 
     override fun getItemCount(): Int {
-        Log.d(TAG, "getItemCount() ${list.size}")
-
         return list.size
     }
 
@@ -51,9 +45,6 @@ class PlaylistsAdapter : RecyclerView.Adapter<PlaylistsAdapter.PlaylistViewHolde
                 .load(picture)
                 .transition(DrawableTransitionOptions.withCrossFade(1500))
                 .into(binding.picture)
-
         }
     }
-
-
 }

@@ -204,39 +204,31 @@ class AuthenticationImplementer private constructor() {
     fun getYouTubeApi(): YouTubeApiClient? {
         Log.d("ttt", "makeApiCall")
         var youTubeApiClient: YouTubeApiClient? = null
-        if(authState.needsTokenRefresh){
+        if (authState.needsTokenRefresh) {
             authState.refreshToken
         }
+        val email = activity.application.getSharedPreferences(
+            Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
+        ).getString(Constants.DATA_EMAIL, "")
 
-//        authState.performActionWithFreshTokens(
-//            authorizationService,
-//            object : AuthState.AuthStateAction {
-//                override fun execute(
-//                    accessToken: String?, idToken: String?, ex: AuthorizationException?
-//                ) {
-//                    Log.d("ttt", "accessToken - $accessToken")
-                    val email = activity.application.getSharedPreferences(
-                        Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
-                    ).getString(Constants.DATA_EMAIL, "")
+        try {
+            val credential: GoogleAccountCredential =
+                GoogleAccountCredential.usingOAuth2(
+                    activity,
+                    Collections.singleton(YouTubeScopes.YOUTUBE)
+                ).setSelectedAccountName(email)
+            Log.d("ttt", "credential - ${credential.token}")
+            youTubeApiClient = YouTubeApiClient(credential, activity)
+            Log.d("ttt", "list - ${youTubeApiClient.getAllPlaylists()}")
 
-                    try {
-                        val credential: GoogleAccountCredential =
-                            GoogleAccountCredential.usingOAuth2(
-                                activity,
-                                Collections.singleton(YouTubeScopes.YOUTUBE)
-                            ).setSelectedAccountName(email)
-                        Log.d("ttt", "credential - ${credential.token}")
-                        youTubeApiClient =  YouTubeApiClient(credential, activity)
-                        Log.d("ttt", "list - ${youTubeApiClient.getAllPlaylists()}")
+        } catch (e: Exception) {
+            Log.d(
+                "ttt", "can't call = ${e.message} ${e.javaClass} "
+            )
+            authState = AuthState()
+            MainScope(). launch(Dispatchers.Main) { persistState() }
+        }
 
-                    } catch (e: Exception) {
-                        Log.d(
-                            "ttt", "can't call = ${e.message} ${e.javaClass} "
-                        )
-
-                    }
-             //   }
-          //  })
         return youTubeApiClient
     }
 
