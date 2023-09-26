@@ -11,7 +11,7 @@ import java.util.Date
 import kotlin.random.Random
 
 
-class PlaylistsWorker {
+class BigPlaylist {
     private lateinit var activity: MainActivity
 
     fun setActivity(activity: MainActivity) {
@@ -24,17 +24,17 @@ class PlaylistsWorker {
         return bigList
     }
 
-    fun getBigListFromShared(): MutableList<VideoIdAndTime> {
+    fun getBigPlaylistFromShared(): MutableList<VideoIdAndTime>? {
         val jsonString = activity.application.getSharedPreferences(
             Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
-        ).getString(Constants.DATA_BIG_LIST, null)
+        ).getString(Constants.DATA_BIG_LIST, null) ?: return null
         val gson = Gson()
         val listType = object : TypeToken<MutableList<VideoIdAndTime>>() {}.type
         return gson.fromJson(jsonString, listType)
     }
 
 
-    fun saveBigList(bigList: MutableList<VideoIdAndTime>) {
+    fun saveBigPlaylist(bigList: MutableList<VideoIdAndTime>) {
         val gson = Gson()
         val jsonString = gson.toJson(bigList)
         activity.application

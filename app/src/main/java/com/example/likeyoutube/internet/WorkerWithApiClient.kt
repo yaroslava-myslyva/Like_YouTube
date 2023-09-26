@@ -5,6 +5,7 @@ import android.content.Context
 import android.util.Log
 import com.example.likeyoutube.Constants
 import com.example.likeyoutube.MainActivity.Companion.TAG
+import com.example.likeyoutube.fragment.one_playlist.VideoInfo
 import com.google.api.services.youtube.model.Playlist
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -26,9 +27,9 @@ class WorkerWithApiClient {
 
     fun getAllPlaylists(): MutableList<Playlist> {
 
-            isYouTubeApiClientNull()
-            val list = youTubeApiClient?.getAllPlaylists()
-            return list ?: mutableListOf<Playlist>()
+        isYouTubeApiClientNull()
+        val list = youTubeApiClient?.getAllPlaylists()
+        return list ?: mutableListOf<Playlist>()
 
     }
 
@@ -103,96 +104,99 @@ class WorkerWithApiClient {
             deserializeStringToMap(it)
         }
 
-            isYouTubeApiClientNull()
-            myPlaylistsTitles?.forEach { title ->
-                val playlistId = myPlaylistsTitlesAndIDs?.get(title)
-                Log.d(TAG, "restoreMyPlaylists: playlistId - $playlistId")
-                val songsIDsListMustBeString = getStringFromShared(title)
-                val songsIDsListMustBe =
-                    songsIDsListMustBeString?.let { deserializeStringToList(it) }
+        isYouTubeApiClientNull()
+        myPlaylistsTitles?.forEach { title ->
+            val playlistId = myPlaylistsTitlesAndIDs?.get(title)
+            Log.d(TAG, "restoreMyPlaylists: playlistId - $playlistId")
+            val songsIDsListMustBeString = getStringFromShared(title)
+            val songsIDsListMustBe =
+                songsIDsListMustBeString?.let { deserializeStringToList(it) }
 
-                val songsIDsListFromAPI = playlistId?.let {
-                    youTubeApiClient?.getAllSongsIDFromPlaylist(it)
-                }
-                songsIDsListMustBe?.forEach { oneSongID ->
-                    songsIDsListFromAPI?.let {
-                        if (!it.contains(oneSongID)) {
-                            youTubeApiClient?.addVideoToPlaylist(playlistId, oneSongID)
-                            val songTitle = youTubeApiClient?.getVideoTitleById(oneSongID)
-                            Log.d(TAG, "restoreMyPlaylists: немає $songTitle, додаю")
-                        }
+            val songsIDsListFromAPI = playlistId?.let {
+                youTubeApiClient?.getAllSongsIDFromPlaylist(it)
+            }
+            songsIDsListMustBe?.forEach { oneSongID ->
+                songsIDsListFromAPI?.let {
+                    if (!it.contains(oneSongID)) {
+                        youTubeApiClient?.addVideoToPlaylist(playlistId, oneSongID)
+                        val songTitle = youTubeApiClient?.getVideoTitleById(oneSongID)
+                        Log.d(TAG, "restoreMyPlaylists: немає $songTitle, додаю")
                     }
+                }
 
             }
         }
     }
 
-    fun getListUniqueVideosFromAllPlaylists(): MutableList<String> {
-
+    suspend fun getListUniqueVideosFromAllPlaylists(): MutableList<String> {
+        return with(Dispatchers.IO) {
             isYouTubeApiClientNull()
             val listUniqueVideosIDs = mutableListOf<String>()
-            // val listAllVideosIDS = mutableListOf<String>()
 
             val playlists = youTubeApiClient?.getAllPlaylists()
             playlists?.forEach { playlist ->
+
                 val playlistID = playlist.id
+                Log.d(TAG, "getListUniqueVideosFromAllPlaylists: $playlistID")
                 val playlistsVideosIDs = youTubeApiClient?.getAllSongsIDFromPlaylist(playlistID)
                 playlistsVideosIDs?.let { list ->
                     list.forEach { videoID ->
-                        // listAllVideosIDS.add(videoID)
                         if (!listUniqueVideosIDs.contains(videoID)) {
                             listUniqueVideosIDs.add(videoID)
                         }
                     }
                 }
             }
-            // Log.d(TAG, "getListUniqueVideos: all video size - ${listAllVideosIDS.size}")
-//            Log.d(TAG, "getListUniqueVideos: unique video size - ${listUniqueVideosIDs.size}")
-//            listUniqueVideosIDs.forEach { videoID ->
-//                val videoTitle = youTubeApiClient?.getVideoTitleById(videoID)
-//                Log.d(TAG, "getListUniqueVideos: $videoTitle")
-//            }
-            return listUniqueVideosIDs
+            listUniqueVideosIDs
+        }
+
 
     }
 
     fun deleteDuplicates(playlistsID: MutableList<String>) {
 
-            isYouTubeApiClientNull()
-            val listUniqueVideosIDs = mutableListOf<String>()
-            var playlists : MutableList<Playlist>?= mutableListOf()
-            if(playlistsID.isEmpty()) {
-                playlists = youTubeApiClient?.getAllPlaylists()
-            } else{
-                playlistsID.forEach { id ->
-                    val playlist = youTubeApiClient?.getPlaylistById(id)
-                    playlist?.let { playlists?.add(it) }
-                }
+        isYouTubeApiClientNull()
+        val listUniqueVideosIDs = mutableListOf<String>()
+        var playlists: MutableList<Playlist>? = mutableListOf()
+        if (playlistsID.isEmpty()) {
+            playlists = youTubeApiClient?.getAllPlaylists()
+        } else {
+            playlistsID.forEach { id ->
+                val playlist = youTubeApiClient?.getPlaylistById(id)
+                playlist?.let { playlists?.add(it) }
             }
+        }
 
-            playlists?.forEach { playlist ->
-                val playlistID = playlist.id
-                val playlistsVideosIDs = youTubeApiClient?.getAllSongsIDFromPlaylist(playlistID)
-                playlistsVideosIDs?.let { list ->
-                    list.forEach { videoID ->
-                        // якщо не містить
-                        if (!listUniqueVideosIDs.contains(videoID)) {
-                            listUniqueVideosIDs.add(videoID)
-                        } else { // якщо містить
+        playlists?.forEach { playlist ->
+            val playlistID = playlist.id
+            val playlistsVideosIDs = youTubeApiClient?.getAllSongsIDFromPlaylist(playlistID)
+            playlistsVideosIDs?.let { list ->
+                list.forEach { videoID ->
+                    // якщо не містить
+                    if (!listUniqueVideosIDs.contains(videoID)) {
+                        listUniqueVideosIDs.add(videoID)
+                    } else { // якщо містить
 //                            val videoTitle = youTubeApiClient?.getVideoTitleById(videoID)
 //                            videoTitle?.let{listDeleteVideosTitles.add(it)}
-                            val playlistItemID =
-                                youTubeApiClient?.findPlaylistItemId(playlistID, videoID)
-                            playlistItemID?.let { youTubeApiClient?.deleteVideoFromPlaylist(it) }
-                        }
+                        val playlistItemID =
+                            youTubeApiClient?.findPlaylistItemId(playlistID, videoID)
+                        playlistItemID?.let { youTubeApiClient?.deleteVideoFromPlaylist(it) }
                     }
                 }
             }
+        }
 //            listDeleteVideosTitles.forEach { videoTitle ->
 //                Log.d(TAG, "deleteDuplicates: $videoTitle")
 //            }
 
 
+    }
+
+    suspend fun getVideoInfo(videoID: String): VideoInfo? {
+        return with(Dispatchers.IO) {
+            isYouTubeApiClientNull()
+            youTubeApiClient?.getVideoInfo(videoID)
+        }
     }
 
     //

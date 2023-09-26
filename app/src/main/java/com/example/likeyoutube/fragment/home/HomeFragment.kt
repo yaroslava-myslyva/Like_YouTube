@@ -1,4 +1,4 @@
-package com.example.likeyoutube.fragment
+package com.example.likeyoutube.fragment.home
 
 import android.app.ProgressDialog
 import android.content.Context
@@ -19,9 +19,10 @@ import com.example.likeyoutube.MainActivity
 import com.example.likeyoutube.MainActivity.Companion.TAG
 import com.example.likeyoutube.R
 import com.example.likeyoutube.databinding.FragmentHomeBinding
+import com.example.likeyoutube.fragment.one_playlist.BigPlaylistFragment
 import com.example.likeyoutube.internet.WorkerWithApiClient
 import com.example.likeyoutube.internet.AuthenticationImplementer
-import com.example.likeyoutube.randomizer.PlaylistsWorker
+import com.example.likeyoutube.randomizer.BigPlaylist
 import com.example.likeyoutube.randomizer.VideoIdAndTime
 import com.google.api.services.youtube.model.Playlist
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +39,7 @@ class HomeFragment : Fragment() {
     private val workerWithApiClient = WorkerWithApiClient()
     private lateinit var mainActivity: MainActivity
     private var list: MutableList<Playlist> = mutableListOf()
+    private val bigPlaylist = BigPlaylist()
 
 
     override fun onCreateView(
@@ -70,6 +72,23 @@ class HomeFragment : Fragment() {
                 .into(mainActivity.activityMainBinding.userProfileImage)
 
         }
+        bigPlaylist.setActivity(mainActivity)
+        val bigList = bigPlaylist.getBigPlaylistFromShared()
+        Log.d(TAG, "home fragment onActivityCreated: size - ${bigList?.size}")
+
+        if (bigList == null || bigList.isEmpty()) {
+            Log.d(TAG, "onActivityCreated: if")
+            MainScope().launch(Dispatchers.IO) {
+                val listVideoIdAndTime = mutableListOf<VideoIdAndTime>()
+                val listUniqueVideoIDs = workerWithApiClient.getListUniqueVideosFromAllPlaylists()
+                listUniqueVideoIDs.forEach { videoID ->
+                    listVideoIdAndTime.add(VideoIdAndTime(videoID))
+                }
+                bigPlaylist.saveBigPlaylist(listVideoIdAndTime)
+            }
+
+        }
+
         setRecyclerView(waiting)
 
         with(fragmentHomeBinding) {
@@ -88,6 +107,13 @@ class HomeFragment : Fragment() {
                     waiting.cancel()
                 }
             }
+            buttonBigPlaylist.setOnClickListener {
+                mainActivity.supportFragmentManager.beginTransaction()
+                    .replace(mainActivity.activityMainBinding.fragment.id, BigPlaylistFragment())
+                    .addToBackStack(null)
+                    .commit()
+            }
+
         }
 
         val popupMenu = PopupMenu(mainActivity, mainActivity.activityMainBinding.userProfileImage)
@@ -108,7 +134,7 @@ class HomeFragment : Fragment() {
         MainScope().launch(Dispatchers.IO) {
             list = workerWithApiClient.getAllPlaylists()
             launch(Dispatchers.Main) {
-                val playlistsAdapter = PlaylistsAdapter()
+                val playlistsAdapter = AllPlaylistsAdapter()
                 playlistsAdapter.setList(list)
                 with(fragmentHomeBinding.recyclerPlaylists) {
                     adapter = playlistsAdapter
@@ -117,35 +143,33 @@ class HomeFragment : Fragment() {
                 waiting.cancel()
             }
         }
-
     }
 
     private fun deleteDuplicates(waiting: ProgressDialog) {
         with(fragmentHomeBinding.recyclerPlaylists) {
-            MainScope().launch(Dispatchers.Main) {
-                val playlistsID = mutableListOf<String>()
-                for (i in 0 until childCount) {
-                    val view = getChildAt(i)
-                    val checkBox = view.findViewById<CheckBox>(R.id.item_playlists_check_box)
+            val playlistsID = mutableListOf<String>()
+            for (i in 0 until childCount) {
+                val view = getChildAt(i)
+                val checkBox = view.findViewById<CheckBox>(R.id.item_playlists_check_box)
 
-                    if (checkBox.isChecked) {
-                        val selectedItemID = list[i].id
-                        playlistsID.add(selectedItemID)
-                    }
-                }
-                launch(Dispatchers.IO) {
-                    workerWithApiClient.deleteDuplicates(playlistsID)
-                    launch(Dispatchers.Main) {
-                        for (i in 0 until childCount) {
-                            val view = getChildAt(i)
-                            val checkBox =
-                                view.findViewById<CheckBox>(R.id.item_playlists_check_box)
-                            checkBox.isChecked = false
-                        }
-                        waiting.cancel()
-                    }
+                if (checkBox.isChecked) {
+                    val selectedItemID = list[i].id
+                    playlistsID.add(selectedItemID)
                 }
             }
+            MainScope().launch(Dispatchers.IO) {
+                workerWithApiClient.deleteDuplicates(playlistsID)
+                launch(Dispatchers.Main) {
+                    for (i in 0 until childCount) {
+                        val view = getChildAt(i)
+                        val checkBox =
+                            view.findViewById<CheckBox>(R.id.item_playlists_check_box)
+                        checkBox.isChecked = false
+                    }
+                    waiting.cancel()
+                }
+            }
+
         }
     }
 
@@ -173,7 +197,7 @@ class HomeFragment : Fragment() {
             VideoIdAndTime("17", dateFormat.parse("2023-03-05")),
             VideoIdAndTime("18", dateFormat.parse("2023-04-05")),
         )
-        val playlistsWorker = PlaylistsWorker()
+        val playlistsWorker = BigPlaylist()
         playlistsWorker.setActivity(mainActivity)
         val result = playlistsWorker.randomize(list)
         Log.d(TAG, "tsiatsia: size ${list.size} ${result.size}")

@@ -2,6 +2,7 @@ package com.example.likeyoutube.internet
 
 import android.content.Context
 import com.example.likeyoutube.R
+import com.example.likeyoutube.fragment.one_playlist.VideoInfo
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.http.HttpRequestInitializer
 import com.google.api.client.http.HttpTransport
@@ -175,6 +176,29 @@ class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
         } catch (e: GoogleJsonResponseException) {
             e.printStackTrace()
         } catch (e: IOException) {
+            e.printStackTrace()
+        }
+
+        return null
+    }
+
+    fun getVideoInfo(videoId: String): VideoInfo? {
+        val videoRequest = mYouTube.videos().list("snippet, contentDetails")
+        videoRequest.id = videoId
+
+        try {
+            val response: VideoListResponse = videoRequest.execute()
+            val videos = response.items
+
+            if (videos != null && videos.isNotEmpty()) {
+                val video = videos[0]
+                val videoUrl = "https://www.youtube.com/watch?v=${video.id}"
+                val videoTitle = video.snippet.title
+                val thumbnailUrl = video.snippet.thumbnails.medium.url
+
+                return VideoInfo(videoUrl, videoTitle, thumbnailUrl)
+            }
+        } catch (e: Exception) {
             e.printStackTrace()
         }
 

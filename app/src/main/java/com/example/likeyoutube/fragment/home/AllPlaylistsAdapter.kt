@@ -1,14 +1,14 @@
-package com.example.likeyoutube.fragment
+package com.example.likeyoutube.fragment.home
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
-import com.example.likeyoutube.databinding.ItemPlaylistsBinding
+import com.example.likeyoutube.databinding.ItemAllPlaylistsBinding
 import com.google.api.services.youtube.model.Playlist
 
-class PlaylistsAdapter : RecyclerView.Adapter<PlaylistsAdapter.PlaylistViewHolder>() {
+class AllPlaylistsAdapter : RecyclerView.Adapter<AllPlaylistsAdapter.PlaylistViewHolder>() {
 
     private lateinit var list: List<Playlist>
 
@@ -18,7 +18,7 @@ class PlaylistsAdapter : RecyclerView.Adapter<PlaylistsAdapter.PlaylistViewHolde
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PlaylistViewHolder {
 
-        val binding = ItemPlaylistsBinding.inflate(
+        val binding = ItemAllPlaylistsBinding.inflate(
             LayoutInflater.from(parent.context),
             parent, false
         )
@@ -34,7 +34,7 @@ class PlaylistsAdapter : RecyclerView.Adapter<PlaylistsAdapter.PlaylistViewHolde
         return list.size
     }
 
-    inner class PlaylistViewHolder(private val binding: ItemPlaylistsBinding) :
+    inner class PlaylistViewHolder(private val binding: ItemAllPlaylistsBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
         fun bind(playlist: Playlist) {
