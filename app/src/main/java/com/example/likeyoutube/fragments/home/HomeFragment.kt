@@ -1,4 +1,4 @@
-package com.example.likeyoutube.fragment.home
+package com.example.likeyoutube.fragments.home
 
 import android.app.ProgressDialog
 import android.content.Context
@@ -19,7 +19,7 @@ import com.example.likeyoutube.MainActivity
 import com.example.likeyoutube.MainActivity.Companion.TAG
 import com.example.likeyoutube.R
 import com.example.likeyoutube.databinding.FragmentHomeBinding
-import com.example.likeyoutube.fragment.one_playlist.BigPlaylistFragment
+import com.example.likeyoutube.fragments.big_playlist.BigPlaylistFragment
 import com.example.likeyoutube.internet.WorkerWithApiClient
 import com.example.likeyoutube.internet.AuthenticationImplementer
 import com.example.likeyoutube.randomizer.BigPlaylist
@@ -36,7 +36,7 @@ class HomeFragment : Fragment() {
 
     private lateinit var fragmentHomeBinding: FragmentHomeBinding
     private val authenticationImplementer = AuthenticationImplementer.getInctance()
-    private val workerWithApiClient = WorkerWithApiClient()
+    private val workerWithApiClient = WorkerWithApiClient.getInctance()
     private lateinit var mainActivity: MainActivity
     private var list: MutableList<Playlist> = mutableListOf()
     private val bigPlaylist = BigPlaylist()
@@ -81,6 +81,10 @@ class HomeFragment : Fragment() {
             MainScope().launch(Dispatchers.IO) {
                 val listVideoIdAndTime = mutableListOf<VideoIdAndTime>()
                 val listUniqueVideoIDs = workerWithApiClient.getListUniqueVideosFromAllPlaylists()
+                Log.d(
+                    TAG,
+                    "onActivityCreated: val listUniqueVideoIDs = workerWithApiClient.getListUniqueVideosFromAllPlaylists()"
+                )
                 listUniqueVideoIDs.forEach { videoID ->
                     listVideoIdAndTime.add(VideoIdAndTime(videoID))
                 }
@@ -133,6 +137,7 @@ class HomeFragment : Fragment() {
     private fun setRecyclerView(waiting: ProgressDialog) {
         MainScope().launch(Dispatchers.IO) {
             list = workerWithApiClient.getAllPlaylists()
+            Log.d(TAG, "setRecyclerView: list = workerWithApiClient.getAllPlaylists()")
             launch(Dispatchers.Main) {
                 val playlistsAdapter = AllPlaylistsAdapter()
                 playlistsAdapter.setList(list)

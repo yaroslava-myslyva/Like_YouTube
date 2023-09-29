@@ -1,4 +1,4 @@
-package com.example.likeyoutube.fragment
+package com.example.likeyoutube.fragments
 
 import android.os.Bundle
 import androidx.fragment.app.Fragment

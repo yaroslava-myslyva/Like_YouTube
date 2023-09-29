@@ -1,4 +1,4 @@
-package com.example.likeyoutube.fragment.home
+package com.example.likeyoutube.fragments.home
 
 import android.view.LayoutInflater
 import android.view.ViewGroup

@@ -1,19 +1,14 @@
-package com.example.likeyoutube.fragment.one_playlist
+package com.example.likeyoutube.fragments.big_playlist
 
 import android.app.ProgressDialog
 import android.os.Bundle
 import android.util.Log
 import android.view.*
 import androidx.fragment.app.Fragment
-import androidx.core.view.MenuHost
-import androidx.core.view.MenuProvider
-import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.likeyoutube.MainActivity
 import com.example.likeyoutube.MainActivity.Companion.TAG
 import com.example.likeyoutube.databinding.FragmentBigPlaylistBinding
-import com.example.likeyoutube.fragment.home.AllPlaylistsAdapter
-import com.example.likeyoutube.fragment.home.HomeFragment
 import com.example.likeyoutube.randomizer.BigPlaylist
 import com.example.likeyoutube.randomizer.VideoIdAndTime
 import kotlinx.coroutines.Dispatchers
@@ -72,11 +67,12 @@ class BigPlaylistFragment : Fragment() {
     private fun setRecyclerView(waiting: ProgressDialog) {
         MainScope().launch(Dispatchers.IO) {
             launch(Dispatchers.Main) {
-                val playlistsAdapter = BigPlaylistAdapter()
-                playlistsAdapter.setList(list)
+                val bigPlaylistAdapter = BigPlaylistAdapter()
+                bigPlaylistAdapter.setList(list)
+                bigPlaylistAdapter.setMainActivity(mainActivity)
                 Log.d(TAG, "setRecyclerView: list.size ${list.size}")
                 with(binding.recyclerBigPlaylist) {
-                    adapter = playlistsAdapter
+                    adapter = bigPlaylistAdapter
                     layoutManager = LinearLayoutManager(context)
                 }
                 waiting.cancel()

@@ -15,9 +15,16 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.LikeYouTube"
         tools:targetApi="31">
+        <activity
+            android:name=".YouTubeActivity"
+            android:exported="false"
+            android:label="@string/title_activity_yactivity2"
+            android:theme="@style/Theme.LikeYouTube.NoActionBar" />
+
         <meta-data
             android:name="com.example.likeyoutube"
             android:value="true" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -26,7 +33,7 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
         </activity>
     </application>
+
 </manifest>

@@ -6,9 +6,11 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.example.likeyoutube.databinding.ActivityMainBinding
-import com.example.likeyoutube.fragment.home.HomeFragment
-import com.example.likeyoutube.fragment.SignInFragment
+import com.example.likeyoutube.fragments.SignInFragment
+import com.example.likeyoutube.fragments.home.HomeFragment
 import com.example.likeyoutube.internet.AuthenticationImplementer
+import java.net.CookieHandler
+import java.net.CookieManager
 
 class MainActivity : AppCompatActivity() {
 
@@ -17,6 +19,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val cookieManager = CookieManager()
+        CookieHandler.setDefault(cookieManager)
 
         activityMainBinding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(activityMainBinding.root)
@@ -33,6 +37,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)

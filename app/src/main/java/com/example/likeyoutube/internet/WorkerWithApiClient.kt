@@ -1,11 +1,12 @@
 package com.example.likeyoutube.internet
 
+import android.annotation.SuppressLint
 import android.app.ProgressDialog
 import android.content.Context
 import android.util.Log
 import com.example.likeyoutube.Constants
 import com.example.likeyoutube.MainActivity.Companion.TAG
-import com.example.likeyoutube.fragment.one_playlist.VideoInfo
+import com.example.likeyoutube.fragments.big_playlist.VideoInfo
 import com.google.api.services.youtube.model.Playlist
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -19,10 +20,25 @@ class WorkerWithApiClient {
     private var myPlaylistsTitles: MutableList<String>? = mutableListOf()
     private var myPlaylistsTitlesAndIDs: MutableMap<String, String>? = mutableMapOf()
 
-    private fun isYouTubeApiClientNull() {
-        if (youTubeApiClient == null) {
-            youTubeApiClient = authenticationImplementer.getYouTubeApi()
+    companion object {
+        @SuppressLint("StaticFieldLeak")
+        @Volatile
+        private var instance: WorkerWithApiClient? = null
+        fun getInctance(): WorkerWithApiClient {
+            return instance ?: synchronized(this) {
+                instance = WorkerWithApiClient()
+                return instance as WorkerWithApiClient
+            }
         }
+    }
+
+    private fun isYouTubeApiClientNull() {
+        synchronized(this){
+            if (youTubeApiClient == null) {
+                youTubeApiClient = authenticationImplementer.getYouTubeApi()
+            }
+        }
+
     }
 
     fun getAllPlaylists(): MutableList<Playlist> {

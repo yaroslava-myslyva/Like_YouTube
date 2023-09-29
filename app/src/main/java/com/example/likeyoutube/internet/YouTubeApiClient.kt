@@ -2,7 +2,7 @@ package com.example.likeyoutube.internet
 
 import android.content.Context
 import com.example.likeyoutube.R
-import com.example.likeyoutube.fragment.one_playlist.VideoInfo
+import com.example.likeyoutube.fragments.big_playlist.VideoInfo
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.http.HttpRequestInitializer
 import com.google.api.client.http.HttpTransport
@@ -37,7 +37,6 @@ class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
 
             val response = request.execute()
             val items = response.items
-
             if (items != null) {
                 playlists.addAll(items)
             }
@@ -80,6 +79,7 @@ class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
                     songs.add(videoTitle)
                 }
             }
+
 
             nextPageToken = playlistItemsResponse.nextPageToken
         } while (nextPageToken != null)
@@ -171,6 +171,7 @@ class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
 
             if (videoList != null && videoList.isNotEmpty()) {
                 val video = videoList[0]
+
                 return video.snippet.title
             }
         } catch (e: GoogleJsonResponseException) {
@@ -183,7 +184,7 @@ class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
     }
 
     fun getVideoInfo(videoId: String): VideoInfo? {
-        val videoRequest = mYouTube.videos().list("snippet, contentDetails")
+        val videoRequest = mYouTube.videos().list("snippet, player")
         videoRequest.id = videoId
 
         try {
@@ -192,9 +193,11 @@ class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
 
             if (videos != null && videos.isNotEmpty()) {
                 val video = videos[0]
-                val videoUrl = "https://www.youtube.com/watch?v=${video.id}"
+
+                val videoUrl = "http://www.youtube.com/watch?v=$videoId"
                 val videoTitle = video.snippet.title
                 val thumbnailUrl = video.snippet.thumbnails.medium.url
+
 
                 return VideoInfo(videoUrl, videoTitle, thumbnailUrl)
             }

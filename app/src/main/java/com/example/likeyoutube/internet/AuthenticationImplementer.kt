@@ -14,7 +14,12 @@ import com.auth0.android.jwt.JWT
 import com.auth0.jwt.interfaces.Claim
 import com.auth0.jwt.interfaces.DecodedJWT
 import com.example.likeyoutube.Constants
+import com.example.likeyoutube.MainActivity.Companion.TAG
 import com.example.likeyoutube.R
+import com.google.android.gms.auth.api.Auth
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.GoogleApiClient
+import com.google.android.gms.common.api.Scope
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.client.http.HttpRequestInitializer
 import com.google.api.client.http.HttpTransport
@@ -44,6 +49,7 @@ class AuthenticationImplementer private constructor() {
     private lateinit var authorizationService: AuthorizationService
     private lateinit var authServiceConfig: AuthorizationServiceConfiguration
     lateinit var activity: Activity
+    var audience :MutableList<String>?= mutableListOf<String>()
 
     companion object {
         @SuppressLint("StaticFieldLeak")
@@ -90,6 +96,7 @@ class AuthenticationImplementer private constructor() {
         activity.application.getSharedPreferences(
             Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
         ).edit().putString(Constants.AUTH_STATE, authState.jsonSerializeString()).apply()
+
         mutable.value = authState.jsonSerializeString()
         Log.d("ttt", "persistState ${authState.jsonSerializeString()}")
     }
@@ -154,6 +161,7 @@ class AuthenticationImplementer private constructor() {
     }
 
     fun handleAuthorizationResponse(intent: Intent) {
+        Log.d(TAG, "handleAuthorizationResponse: ")
         val authorizationResponse: AuthorizationResponse? = AuthorizationResponse.fromIntent(intent)
         val error = AuthorizationException.fromIntent(intent)
 
@@ -169,6 +177,7 @@ class AuthenticationImplementer private constructor() {
                     if (response != null) {
                         authState.update(response, exception)
                         jwt = JWT(response.idToken!!)
+                            audience = jwt!!.audience
                         val decodedJWT: DecodedJWT = com.auth0.jwt.JWT.decode(jwt.toString())
                         savingUserData(decodedJWT.claims)
                         Log.d(
@@ -207,16 +216,20 @@ class AuthenticationImplementer private constructor() {
         if (authState.needsTokenRefresh) {
             authState.refreshToken
         }
+
         val email = activity.application.getSharedPreferences(
             Constants.SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE
         ).getString(Constants.DATA_EMAIL, "")
-
+        Log.d(TAG, "getYouTubeApi: email = $email")
         try {
+
             val credential: GoogleAccountCredential =
-                GoogleAccountCredential.usingOAuth2(
+                GoogleAccountCredential //.usingAudience(activity, audience?.get(0) ?: "")
+                    .usingOAuth2(
                     activity,
                     Collections.singleton(YouTubeScopes.YOUTUBE)
-                ).setSelectedAccountName(email)
+                )
+                    .setSelectedAccountName(email)
             Log.d("ttt", "credential - ${credential.token}")
             youTubeApiClient = YouTubeApiClient(credential, activity)
             Log.d("ttt", "list - ${youTubeApiClient.getAllPlaylists()}")
@@ -225,6 +238,7 @@ class AuthenticationImplementer private constructor() {
             Log.d(
                 "ttt", "can't call = ${e.message} ${e.javaClass} "
             )
+            e.stackTrace.forEach { Log.d(TAG, "getYouTubeApi: $it") }
             authState = AuthState()
             MainScope(). launch(Dispatchers.Main) { persistState() }
         }

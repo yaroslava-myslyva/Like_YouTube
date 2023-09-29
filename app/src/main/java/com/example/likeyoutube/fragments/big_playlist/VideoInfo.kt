@@ -1,4 +1,4 @@
-package com.example.likeyoutube.fragment.one_playlist
+package com.example.likeyoutube.fragments.big_playlist
 
 data class VideoInfo(
     val videoUrl: String,
