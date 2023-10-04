@@ -1,14 +1,13 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-   // id 'com.google.gms.google-services'
 }
 
 android {
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.likeyoutube"
+        applicationId "com.example.likeyoutube2"
         minSdk 21
         targetSdk 34
         versionCode 1
