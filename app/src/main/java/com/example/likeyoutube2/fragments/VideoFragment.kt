@@ -1,14 +1,24 @@
 package com.example.likeyoutube2.fragments
 
 
+import android.annotation.SuppressLint
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Bundle
+import android.os.IBinder
+import android.util.Log
 import android.util.SparseArray
 import android.view.LayoutInflater
+import android.view.SurfaceHolder
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.example.likeyoutube2.MainActivity
+import com.example.likeyoutube2.MainActivity.Companion.TAG
 import com.example.likeyoutube2.databinding.FragmentVideoBinding
 import com.example.likeyoutube2.from_libs.VideoMeta
 import com.example.likeyoutube2.from_libs.YouTubeExtractor
@@ -28,6 +38,8 @@ class VideoFragment : Fragment() {
     private lateinit var mainActivity: MainActivity
     private lateinit var binding: FragmentVideoBinding
     private lateinit var videoUrl: String
+    private lateinit var videoService: VideoPlaybackService
+    private lateinit var videoUri :Uri
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -39,32 +51,94 @@ class VideoFragment : Fragment() {
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         mainActivity = activity as MainActivity
-       // var downloadUrl = ""
-            val videoView = binding.videoView
-            object : YouTubeExtractor(mainActivity) {
-                override fun onExtractionComplete(
-                    ytFiles: SparseArray<YtFile>?,
-                    vMeta: VideoMeta?
-                ) {
-                    if (ytFiles != null) {
+        // var downloadUrl = ""
+        val videoView = binding.videoView
 
-                        val itag =  ytFiles.keyAt(0) //18
-//                        ytFiles.forEach{ i, yt ->
-//                            Log.d(TAG, "onExtractionComplete: $i ${yt.url}")
-//                        }
-                        val downloadUrl: String = ytFiles[itag].getUrl()
-                        val videoUri = Uri.parse(downloadUrl)
-                        videoView.setVideoURI(videoUri)
-                       // videoView.requestFocus();
 
-           videoView.start()
 
-                    }
+
+    }
+    @SuppressLint("StaticFieldLeak")
+    override fun onStart() {
+        super.onStart()
+        object : YouTubeExtractor(mainActivity) {
+
+            override fun onExtractionComplete(
+                ytFiles: SparseArray<YtFile>?,
+                vMeta: VideoMeta?
+            ) {
+                if (ytFiles != null) {
+                    val itag = ytFiles.keyAt(0)
+                    val downloadUrl: String = ytFiles[itag].getUrl()
+                    videoUri = Uri.parse(downloadUrl)
+
+                    val serviceIntent = Intent(mainActivity, VideoPlaybackService::class.java)
+                    mainActivity.bindService(
+                        serviceIntent,
+                        serviceConnection,
+                        Context.BIND_AUTO_CREATE
+                    )
+
+
+//                    videoView.setVideoURI(videoUri)
+//                    videoView.requestFocus();
+//                    videoView.start()
+
+
                 }
-            }.extract(videoUrl)
+            }
+        }.extract(videoUrl)
+    }
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            Log.d(TAG, "onServiceConnected: ")
+            val binder = service as VideoPlaybackService.LocalBinder
+            videoService = binder.getService()
+            val surfaceHolder = binding.videoView.holder
+            videoService.mediaPlayer.setDisplay(surfaceHolder)
+            surfaceHolder.addCallback(object : SurfaceHolder.Callback {
+                override fun surfaceCreated(holder: SurfaceHolder) {
+                    Log.d(TAG, "surfaceCreated: ")
+                    videoService.mediaPlayer.setDisplay(holder)
+                }
 
+                override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+                    // Обробка змін розміру поверхні, якщо потрібно
+                }
 
+                override fun surfaceDestroyed(holder: SurfaceHolder) {
+                    // Ваш код при знищенні поверхні
+                }
+            })
+            playVideo(videoUri)
+        }
 
+        override fun onServiceDisconnected(name: ComponentName?) {
+            // Обробка відключення служби (не обов'язково)
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Відключіть службу після завершення додатка
+        mainActivity.unbindService(serviceConnection)
+    }
+
+    fun playVideo(videoUri: Uri) {
+        videoService.playVideo(videoUri)
+    }
+
+    fun pauseVideo() {
+        videoService.pauseVideo()
+    }
+
+    fun resumeVideo() {
+        videoService.resumeVideo()
+    }
+
+    fun stopVideo() {
+        videoService.stopVideo()
+    }
 
 
 //        try {
@@ -80,7 +154,7 @@ class VideoFragment : Fragment() {
 //        } catch (e: java.lang.Exception) {
 //            Log.d(TAG, "onActivityCreated: ${e.message} ${e.javaClass}")
 //        }
-}
+ //   }
 //        val transaction: FragmentTransaction = fragmentManager!!.beginTransaction()
 //        transaction.replace(R.id.frame_fragment, youTubePlayerFragment)
 //        transaction.commit()
@@ -172,34 +246,34 @@ class VideoFragment : Fragment() {
 //        }
 
 
-@Throws(IOException::class)
-private fun getVideoPage(videoUrl: String): String? {
-    val pageContent = StringBuilder()
-    val url = URL(videoUrl)
-    val connection: HttpURLConnection = url.openConnection() as HttpURLConnection
-    BufferedReader(InputStreamReader(connection.getInputStream())).use { reader ->
-        var line: String?
-        while (reader.readLine().also { line = it } != null) {
-            pageContent.append(line)
+    @Throws(IOException::class)
+    private fun getVideoPage(videoUrl: String): String? {
+        val pageContent = StringBuilder()
+        val url = URL(videoUrl)
+        val connection: HttpURLConnection = url.openConnection() as HttpURLConnection
+        BufferedReader(InputStreamReader(connection.getInputStream())).use { reader ->
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                pageContent.append(line)
+            }
         }
+        return pageContent.toString()
     }
-    return pageContent.toString()
-}
 
-private fun extractAudioStreamUrl(videoPage: String): String? {
-    // Ваша логіка парсингу веб-сторінки відео тут
-    // Шукайте URL аудіо-стріму в розмітці веб-сторінки і витягніть його.
-    // Враховуйте, що цей метод може змінюватися від часу до часу через зміни на YouTube.
-    // Використовуйте регулярні вирази або парсери HTML/XML для цього.
-    // Ось загальний приклад:
-    val pattern: Pattern = Pattern.compile("\"url\":\"([^\"]*)\"")
-    val matcher: Matcher = pattern.matcher(videoPage)
-    return if (matcher.find()) {
-        matcher.group(1)
-    } else null
-}
+    private fun extractAudioStreamUrl(videoPage: String): String? {
+        // Ваша логіка парсингу веб-сторінки відео тут
+        // Шукайте URL аудіо-стріму в розмітці веб-сторінки і витягніть його.
+        // Враховуйте, що цей метод може змінюватися від часу до часу через зміни на YouTube.
+        // Використовуйте регулярні вирази або парсери HTML/XML для цього.
+        // Ось загальний приклад:
+        val pattern: Pattern = Pattern.compile("\"url\":\"([^\"]*)\"")
+        val matcher: Matcher = pattern.matcher(videoPage)
+        return if (matcher.find()) {
+            matcher.group(1)
+        } else null
+    }
 
-fun setVideoUrl(url: String) {
-    this.videoUrl = url
-}
+    fun setVideoUrl(url: String) {
+        this.videoUrl = url
+    }
 }

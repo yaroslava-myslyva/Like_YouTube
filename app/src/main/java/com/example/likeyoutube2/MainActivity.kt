@@ -17,6 +17,7 @@ class MainActivity : AppCompatActivity(), GoogleApiClient.OnConnectionFailedList
     lateinit var activityMainBinding: ActivityMainBinding
     private val authenticationImplementer = GoogleSignInAuthenticationImplementer.getInctance()
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val cookieManager = CookieManager()
