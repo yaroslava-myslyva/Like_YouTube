@@ -166,6 +166,24 @@ synchronized(this) {
         }
     }
 
+    suspend fun getListUniqueVideosFromGivenPlaylists(listPlaylistsIDs :MutableList<String>): MutableList<String> {
+        return with(Dispatchers.IO) {
+            isYouTubeApiClientNull()
+            val listUniqueVideosIDs = mutableListOf<String>()
+            listPlaylistsIDs.forEach { playlistID ->
+                val playlistsVideosIDs = youTubeApiClient?.getAllSongsIDFromPlaylist(playlistID)
+                playlistsVideosIDs?.let { list ->
+                    list.forEach { videoID ->
+                        if (!listUniqueVideosIDs.contains(videoID)) {
+                            listUniqueVideosIDs.add(videoID)
+                        }
+                    }
+                }
+            }
+            listUniqueVideosIDs
+        }
+    }
+
     fun deleteDuplicates(playlistsID: MutableList<String>) {
 
         isYouTubeApiClientNull()

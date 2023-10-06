@@ -1,7 +1,10 @@
 package com.example.likeyoutube2.fragments.home
 
+import android.app.AlertDialog
+import android.app.Dialog
 import android.app.ProgressDialog
 import android.content.Context
+import android.content.DialogInterface
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -10,6 +13,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.PopupMenu
+import android.widget.Toast
+import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
@@ -73,26 +78,7 @@ class HomeFragment : Fragment() {
                 .into(mainActivity.activityMainBinding.userProfileImage)
 
         }
-        bigPlaylist.setActivity(mainActivity)
-        val bigList = bigPlaylist.getBigPlaylistFromShared()
-        Log.d(TAG, "home fragment onActivityCreated: size - ${bigList?.size}")
 
-        if (bigList == null || bigList.isEmpty()) {
-            Log.d(TAG, "onActivityCreated: if")
-            MainScope().launch(Dispatchers.IO) {
-                val listVideoIdAndTime = mutableListOf<VideoIdAndTime>()
-                val listUniqueVideoIDs = workerWithApiClient.getListUniqueVideosFromAllPlaylists()
-                Log.d(
-                    TAG,
-                    "onActivityCreated: val listUniqueVideoIDs = workerWithApiClient.getListUniqueVideosFromAllPlaylists()"
-                )
-                listUniqueVideoIDs.forEach { videoID ->
-                    listVideoIdAndTime.add(VideoIdAndTime(videoID))
-                }
-                bigPlaylist.saveBigPlaylist(listVideoIdAndTime)
-            }
-
-        }
 
         setRecyclerView(waiting)
 
@@ -106,17 +92,14 @@ class HomeFragment : Fragment() {
                 deleteDuplicates(waiting)
             }
             buttonRestoreMyPlaylists.setOnClickListener {
-                waiting.show()
+
                 thread(start = true) {
                     workerWithApiClient.restoreMyPlaylists()
                     waiting.cancel()
                 }
             }
             buttonBigPlaylist.setOnClickListener {
-                mainActivity.supportFragmentManager.beginTransaction()
-                    .replace(mainActivity.activityMainBinding.fragment.id, BigPlaylistFragment())
-                    .addToBackStack(null)
-                    .commit()
+                fetchingBigPlaylist(waiting)
             }
 
         }
@@ -153,16 +136,7 @@ class HomeFragment : Fragment() {
 
     private fun deleteDuplicates(waiting: ProgressDialog) {
         with(fragmentHomeBinding.recyclerPlaylists) {
-            val playlistsID = mutableListOf<String>()
-            for (i in 0 until childCount) {
-                val view = getChildAt(i)
-                val checkBox = view.findViewById<CheckBox>(R.id.item_playlists_check_box)
-
-                if (checkBox.isChecked) {
-                    val selectedItemID = list[i].id
-                    playlistsID.add(selectedItemID)
-                }
-            }
+            val playlistsID = getCheckedPlaylistsIDs()
             MainScope().launch(Dispatchers.IO) {
                 workerWithApiClient.deleteDuplicates(playlistsID)
                 launch(Dispatchers.Main) {
@@ -175,8 +149,62 @@ class HomeFragment : Fragment() {
                     waiting.cancel()
                 }
             }
-
         }
+    }
+
+    private fun fetchingBigPlaylist(waiting: ProgressDialog) {
+        bigPlaylist.setActivity(mainActivity)
+        val bigList = bigPlaylist.getBigPlaylistFromShared()
+        Log.d(TAG, "bigList size - ${bigList?.size}")
+        val checkedPlaylists = getCheckedPlaylistsIDs()
+
+        if (checkedPlaylists.isEmpty() && (bigList == null || bigList.isEmpty())) {
+            Log.d(TAG, "bigList is empty")
+            val dialog = SelectionDialog()
+            dialog.initDialog(mainActivity, workerWithApiClient, waiting, bigPlaylist)
+            dialog.show(mainActivity.supportFragmentManager, "Selection dialog")
+
+        } else if (checkedPlaylists.isNotEmpty()) {
+            waiting.show()
+            Log.d(TAG, "checkedPlaylists is not empty")
+            MainScope().launch(Dispatchers.IO) {
+                val listVideoIdAndTime = mutableListOf<VideoIdAndTime>()
+                val listUniqueVideoIDs =
+                    workerWithApiClient.getListUniqueVideosFromGivenPlaylists(checkedPlaylists)
+                Log.d(TAG, "FromGivenPlaylists()")
+                listUniqueVideoIDs.forEach { videoID ->
+                    // час зануляється TODO
+                    listVideoIdAndTime.add(VideoIdAndTime(videoID))
+                }
+                bigPlaylist.saveBigPlaylist(listVideoIdAndTime)
+                mainActivity.supportFragmentManager.beginTransaction()
+                    .replace(mainActivity.activityMainBinding.fragment.id, BigPlaylistFragment())
+                    .addToBackStack(null)
+                    .commit()
+                waiting.cancel()
+            }
+        } else {
+            mainActivity.supportFragmentManager.beginTransaction()
+                .replace(mainActivity.activityMainBinding.fragment.id, BigPlaylistFragment())
+                .addToBackStack(null)
+                .commit()
+        }
+    }
+
+    private fun getCheckedPlaylistsIDs(): MutableList<String> {
+        val playlistsID = mutableListOf<String>()
+        with(fragmentHomeBinding.recyclerPlaylists) {
+            for (i in 0 until childCount) {
+                val view = getChildAt(i)
+                val checkBox = view.findViewById<CheckBox>(R.id.item_playlists_check_box)
+
+                if (checkBox.isChecked) {
+                    val selectedItemID = list[i].id
+                    playlistsID.add(selectedItemID)
+                }
+            }
+        }
+        return playlistsID
     }
 
 
