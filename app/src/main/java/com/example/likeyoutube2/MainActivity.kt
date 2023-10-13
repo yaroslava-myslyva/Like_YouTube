@@ -26,17 +26,9 @@ class MainActivity : AppCompatActivity(), GoogleApiClient.OnConnectionFailedList
         activityMainBinding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(activityMainBinding.root)
 
-        authenticationImplementer.initActivity(this)
+        authenticationImplementer.init(this)
         authenticationImplementer.restoreState()
 
-//        authenticationImplementer.mutable.observe(this) {
-//            Log.d("ttt", "it - $it")
-//            if (it != "{}") {
-//                selectFragment(HomeFragment())
-//            } else {
-//                selectFragment(SignInFragment())
-//            }
-//        }
     }
 
 

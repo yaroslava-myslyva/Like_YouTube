@@ -1,10 +1,7 @@
 package com.example.likeyoutube2.fragments.home
 
-import android.app.AlertDialog
-import android.app.Dialog
 import android.app.ProgressDialog
 import android.content.Context
-import android.content.DialogInterface
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -13,8 +10,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.PopupMenu
-import android.widget.Toast
-import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
@@ -27,7 +22,7 @@ import com.example.likeyoutube2.databinding.FragmentHomeBinding
 import com.example.likeyoutube2.fragments.big_playlist.BigPlaylistFragment
 import com.example.likeyoutube2.internet.WorkerWithApiClient
 import com.example.likeyoutube2.internet.authentication.GoogleSignInAuthenticationImplementer
-import com.example.likeyoutube2.randomizer.BigPlaylist
+import com.example.likeyoutube2.randomizer.WorkerBigPlaylist
 import com.example.likeyoutube2.randomizer.VideoIdAndTime
 import com.google.api.services.youtube.model.Playlist
 import kotlinx.coroutines.Dispatchers
@@ -44,7 +39,7 @@ class HomeFragment : Fragment() {
     private val workerWithApiClient = WorkerWithApiClient.getInctance()
     private lateinit var mainActivity: MainActivity
     private var list: MutableList<Playlist> = mutableListOf()
-    private val bigPlaylist = BigPlaylist()
+    private val bigPlaylist = WorkerBigPlaylist()
 
 
     override fun onCreateView(
@@ -114,8 +109,6 @@ class HomeFragment : Fragment() {
         })
         mainActivity.activityMainBinding.userProfileImage.setOnClickListener { popupMenu.show() }
 
-
-        //  tsiatsia()
     }
 
     private fun setRecyclerView(waiting: ProgressDialog) {
@@ -168,15 +161,25 @@ class HomeFragment : Fragment() {
             waiting.show()
             Log.d(TAG, "checkedPlaylists is not empty")
             MainScope().launch(Dispatchers.IO) {
-                val listVideoIdAndTime = mutableListOf<VideoIdAndTime>()
+                val listResultVideoIdAndTime = mutableListOf<VideoIdAndTime>()
                 val listUniqueVideoIDs =
                     workerWithApiClient.getListUniqueVideosFromGivenPlaylists(checkedPlaylists)
-                Log.d(TAG, "FromGivenPlaylists()")
-                listUniqueVideoIDs.forEach { videoID ->
-                    // час зануляється TODO
-                    listVideoIdAndTime.add(VideoIdAndTime(videoID))
+                listUniqueVideoIDs.forEach { itVideoID ->
+                    val foundVIDT =
+                        bigList?.find { it.videoID == itVideoID && it.lastListening != null }
+                    if (foundVIDT == null) {
+                        listResultVideoIdAndTime.add(VideoIdAndTime(itVideoID))
+                    } else {
+                        listResultVideoIdAndTime.add(foundVIDT)
+                        val dateFormat = SimpleDateFormat("dd-MM-yyyy HH:mm:ss")
+                        Log.d(
+                            TAG,
+                            "fetchingBigPlaylist: ${dateFormat.format(foundVIDT.lastListening)}"
+                        )
+                    }
+
                 }
-                bigPlaylist.saveBigPlaylist(listVideoIdAndTime)
+                bigPlaylist.saveBigPlaylist(listResultVideoIdAndTime)
                 mainActivity.supportFragmentManager.beginTransaction()
                     .replace(mainActivity.activityMainBinding.fragment.id, BigPlaylistFragment())
                     .addToBackStack(null)
@@ -207,37 +210,4 @@ class HomeFragment : Fragment() {
         return playlistsID
     }
 
-
-    private fun tsiatsia() {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd")
-        dateFormat.parse("2023-04-05")
-        val list = mutableListOf<VideoIdAndTime>(
-            VideoIdAndTime("1", dateFormat.parse("2023-01-05")),
-            VideoIdAndTime("2"),
-            VideoIdAndTime("3"),
-            VideoIdAndTime("4"),
-            VideoIdAndTime("5"),
-            VideoIdAndTime("6"),
-            VideoIdAndTime("7"),
-            VideoIdAndTime("8"),
-            VideoIdAndTime("9"),
-            VideoIdAndTime("10"),
-            VideoIdAndTime("11"),
-            VideoIdAndTime("12"),
-            VideoIdAndTime("13"),
-            VideoIdAndTime("14"),
-            VideoIdAndTime("15"),
-            VideoIdAndTime("16", dateFormat.parse("2023-02-05")),
-            VideoIdAndTime("17", dateFormat.parse("2023-03-05")),
-            VideoIdAndTime("18", dateFormat.parse("2023-04-05")),
-        )
-        val playlistsWorker = BigPlaylist()
-        playlistsWorker.setActivity(mainActivity)
-        val result = playlistsWorker.randomize(list)
-        Log.d(TAG, "tsiatsia: size ${list.size} ${result.size}")
-        result.forEach {
-            Log.d(TAG, "tsiatsia: ${it.videoID}")
-        }
-
-    }
 }

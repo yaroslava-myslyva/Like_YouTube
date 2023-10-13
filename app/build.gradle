@@ -99,6 +99,9 @@ dependencies {
     implementation 'com.google.api-client:google-api-client-android:2.2.0'
     implementation 'com.google.apis:google-api-services-youtube:v3-rev222-1.25.0'
 
+    implementation 'com.google.android.exoplayer:exoplayer:2.15.0'
+    implementation 'org.graalvm.sdk:graal-sdk:1.0.0-rc12'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.2'
 
 
 }

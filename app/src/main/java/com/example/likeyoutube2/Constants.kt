@@ -29,8 +29,6 @@ class Constants {
 
         val URL_LOGOUT = "https://accounts.google.com/o/oauth2/revoke?token="
 
-        val URL_LOGOUT_REDIRECT = "com.example.likeyoutube:/logout"
-
         val RC_SIGN_IN = 100
     }
 }

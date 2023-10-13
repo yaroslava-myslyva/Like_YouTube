@@ -9,6 +9,7 @@
     android:orientation="vertical"
     tools:context=".fragments.home.HomeFragment">
 
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_playlists"
         android:layout_width="match_parent"
@@ -16,47 +17,68 @@
         android:layout_gravity="center"
         android:layout_weight="4" />
 
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layout_buttons"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginHorizontal="2dp"
+        android:columnCount="2"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingHorizontal="2dp"
+        android:useDefaultMargins="false">
 
-        <GridLayout
-            android:id="@+id/layout_buttons"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:columnCount="2"
-            android:orientation="horizontal"
-            android:rowCount="2">
+        <Button
+            android:id="@+id/button_save_my_playlists"
+            android:layout_width="168dp"
+            android:layout_height="64dp"
+            android:layout_gravity="center"
+            android:layout_marginHorizontal="4dp"
+            android:gravity="center"
+            android:text="Save playlists"
+            app:layout_constraintBottom_toTopOf="@id/button_delete_duplicates"
+            app:layout_constraintEnd_toStartOf="@id/button_restore_my_playlists"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
-            <Button
-                android:id="@+id/button_save_my_playlists"
-                android:layout_width="190dp"
-                android:layout_height="56dp"
-                android:layout_gravity="center"
-                android:layout_marginHorizontal="2dp"
-                android:gravity="center"
-                android:text="Save playlists" />
+        <Button
+            android:id="@+id/button_restore_my_playlists"
+            android:layout_width="168dp"
+            android:layout_height="64dp"
+            android:layout_gravity="center"
+            android:layout_marginHorizontal="4dp"
+            android:gravity="center"
+            android:text="Restore playlists"
+            app:layout_constraintBottom_toTopOf="@id/button_big_playlist"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/button_save_my_playlists"
+            app:layout_constraintTop_toTopOf="parent" />
 
-            <Button
-                android:id="@+id/button_restore_my_playlists"
-                android:layout_width="190dp"
-                android:layout_height="56dp"
-                android:layout_gravity="center"
-                android:layout_marginHorizontal="2dp"
-                android:text="Restore playlists" />
+        <Button
+            android:id="@+id/button_delete_duplicates"
+            android:layout_width="168dp"
+            android:layout_height="64dp"
+            android:layout_gravity="center"
+            android:layout_marginHorizontal="4dp"
+            android:gravity="center"
+            android:text="Delete duplicates"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/button_big_playlist"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/button_save_my_playlists" />
 
-            <Button
-                android:id="@+id/button_delete_duplicates"
-                android:layout_width="190dp"
-                android:layout_height="56dp"
-                android:layout_gravity="center"
-                android:layout_marginHorizontal="2dp"
-                android:text="Delete duplicates" />
-
-            <Button
-                android:id="@+id/button_big_playlist"
-                android:layout_width="190dp"
-                android:layout_height="56dp"
-                android:layout_gravity="center"
-                android:layout_marginHorizontal="2dp"
-                android:text="Play" />
-        </GridLayout>
+        <Button
+            android:id="@+id/button_big_playlist"
+            android:layout_width="168dp"
+            android:layout_height="64dp"
+            android:layout_gravity="center"
+            android:layout_marginHorizontal="4dp"
+            android:gravity="center"
+            android:text="Play"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/button_delete_duplicates"
+            app:layout_constraintTop_toBottomOf="@id/button_restore_my_playlists" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </LinearLayout>

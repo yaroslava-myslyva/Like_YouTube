@@ -45,7 +45,7 @@ class GoogleSignInAuthenticationImplementer() : IAuthenticationImplementer {
         }
     }
 
-    override fun initActivity(act: MainActivity) {
+    override fun init(act: MainActivity) {
         activity = act
     }
 

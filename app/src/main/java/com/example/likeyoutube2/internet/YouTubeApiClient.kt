@@ -31,9 +31,7 @@ class YouTubeApiClient(credential: HttpRequestInitializer, context: Context) {
     fun getAllPlaylists(): MutableList<Playlist>? {
         val playlists = mutableListOf<Playlist>()
         try {
-
             var nextPageToken: String? = null
-
             do {
                 val request = mYouTube.playlists().list("snippet")
                 request.mine = true

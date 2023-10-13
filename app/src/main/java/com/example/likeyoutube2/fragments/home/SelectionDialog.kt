@@ -10,7 +10,7 @@ import androidx.fragment.app.DialogFragment
 import com.example.likeyoutube2.MainActivity
 import com.example.likeyoutube2.fragments.big_playlist.BigPlaylistFragment
 import com.example.likeyoutube2.internet.WorkerWithApiClient
-import com.example.likeyoutube2.randomizer.BigPlaylist
+import com.example.likeyoutube2.randomizer.WorkerBigPlaylist
 import com.example.likeyoutube2.randomizer.VideoIdAndTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -20,14 +20,14 @@ class SelectionDialog : DialogFragment() {
     private lateinit var mainActivity: MainActivity
     private lateinit var workerWithApiClient: WorkerWithApiClient
     private lateinit var waiting: ProgressDialog
-    private lateinit var bigPlaylist: BigPlaylist
+    private lateinit var bigPlaylist: WorkerBigPlaylist
 
     fun initDialog(
         mainActivity: MainActivity,
         workerWithApiClient: WorkerWithApiClient,
         waiting: ProgressDialog,
 
-        bigPlaylist: BigPlaylist
+        bigPlaylist: WorkerBigPlaylist
     ) {
         this.mainActivity = mainActivity
         this.workerWithApiClient = workerWithApiClient
@@ -62,7 +62,10 @@ class SelectionDialog : DialogFragment() {
                     }
                     bigPlaylist.saveBigPlaylist(listVideoIdAndTime)
                     mainActivity.supportFragmentManager.beginTransaction()
-                        .replace(mainActivity.activityMainBinding.fragment.id, BigPlaylistFragment())
+                        .replace(
+                            mainActivity.activityMainBinding.fragment.id,
+                            BigPlaylistFragment()
+                        )
                         .addToBackStack(null)
                         .commit()
                     waiting.cancel()

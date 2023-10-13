@@ -1,7 +1,6 @@
 package com.example.likeyoutube2.internet.authentication
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -40,7 +39,7 @@ class AppAuthAuthenticationImplementer private constructor() : IAuthenticationIm
     private lateinit var authorizationService: AuthorizationService
     private lateinit var authServiceConfig: AuthorizationServiceConfiguration
     override lateinit var activity: MainActivity
-    var audience :MutableList<String>?= mutableListOf<String>()
+    var audience: MutableList<String>? = mutableListOf<String>()
 
     companion object {
         @SuppressLint("StaticFieldLeak")
@@ -54,7 +53,7 @@ class AppAuthAuthenticationImplementer private constructor() : IAuthenticationIm
         }
     }
 
-    override fun initActivity(act: MainActivity) {
+    override fun init(act: MainActivity) {
         activity = act
         initAuthServiceConfig()
         initAuthService()
@@ -168,7 +167,7 @@ class AppAuthAuthenticationImplementer private constructor() : IAuthenticationIm
                     if (response != null) {
                         authState.update(response, exception)
                         jwt = JWT(response.idToken!!)
-                            audience = jwt!!.audience
+                        audience = jwt!!.audience
                         val decodedJWT: DecodedJWT = com.auth0.jwt.JWT.decode(jwt.toString())
                         savingUserData(decodedJWT.claims)
                         Log.d(
@@ -217,9 +216,9 @@ class AppAuthAuthenticationImplementer private constructor() : IAuthenticationIm
             val credential: GoogleAccountCredential =
                 GoogleAccountCredential //.usingAudience(activity, audience?.get(0) ?: "")
                     .usingOAuth2(
-                    activity,
-                    Collections.singleton(YouTubeScopes.YOUTUBE)
-                )
+                        activity,
+                        Collections.singleton(YouTubeScopes.YOUTUBE)
+                    )
                     .setSelectedAccountName(email)
             Log.d("ttt", "credential - ${credential.token}")
             youTubeApiClient = YouTubeApiClient(credential, activity)
@@ -231,7 +230,7 @@ class AppAuthAuthenticationImplementer private constructor() : IAuthenticationIm
             )
             e.stackTrace.forEach { Log.d(TAG, "getYouTubeApi: $it") }
             authState = AuthState()
-            MainScope(). launch(Dispatchers.Main) { persistState() }
+            MainScope().launch(Dispatchers.Main) { persistState() }
         }
 
         return youTubeApiClient

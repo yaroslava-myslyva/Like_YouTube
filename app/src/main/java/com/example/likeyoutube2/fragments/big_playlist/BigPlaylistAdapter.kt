@@ -1,15 +1,12 @@
 package com.example.likeyoutube2.fragments.big_playlist
 
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.example.likeyoutube2.MainActivity
-import com.example.likeyoutube2.MainActivity.Companion.TAG
 import com.example.likeyoutube2.databinding.ItemBigPlaylistBinding
-import com.example.likeyoutube2.fragments.VideoFragment
 import com.example.likeyoutube2.internet.WorkerWithApiClient
 import com.example.likeyoutube2.randomizer.VideoIdAndTime
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +23,7 @@ class BigPlaylistAdapter : RecyclerView.Adapter<BigPlaylistAdapter.BigPlaylistVi
         this.list = list
     }
 
-    fun setMainActivity(activity: MainActivity){
+    fun setMainActivity(activity: MainActivity) {
         mainActivity = activity
     }
 
@@ -52,8 +49,7 @@ class BigPlaylistAdapter : RecyclerView.Adapter<BigPlaylistAdapter.BigPlaylistVi
         RecyclerView.ViewHolder(binding.root) {
 
         fun bind(videoIdAndTime: VideoIdAndTime) {
-            Log.d(TAG, "bind: ")
-            MainScope().launch (Dispatchers.IO){
+            MainScope().launch(Dispatchers.IO) {
                 val videoInfo = workerWithApiClient.getVideoInfo(videoIdAndTime.videoID)
                 launch(Dispatchers.Main) {
                     val picture = videoInfo?.pictureUrl
@@ -62,22 +58,6 @@ class BigPlaylistAdapter : RecyclerView.Adapter<BigPlaylistAdapter.BigPlaylistVi
                         .load(picture)
                         .transition(DrawableTransitionOptions.withCrossFade(1500))
                         .into(binding.picture)
-                    itemView.setOnClickListener {
-
-//                        val intentStartYoutube = YouTubeIntents.createPlayVideoIntent( mainActivity.baseContext
-//                            , videoIdAndTime.videoID
-                        //)ApplicationProvider.getApplicationContext<Context>()
-                        // Запускаем приложение YouTube с указанным видеороликом
-                        // Запускаем приложение YouTube с указанным видеороликом
-                       // mainActivity.startActivity(intentStartYoutube)
-                        val videoFragment = VideoFragment()
-                        videoInfo?.videoUrl?.let { videoUrl -> videoFragment.setVideoUrl(videoUrl) }
-                        mainActivity.supportFragmentManager.beginTransaction()
-                            .replace(mainActivity.activityMainBinding.fragment.id, videoFragment)
-                            .addToBackStack(null)
-                            .commit()
-                    }
-
 
                 }
             }
