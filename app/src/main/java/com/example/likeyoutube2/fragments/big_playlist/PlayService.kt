@@ -37,6 +37,7 @@ class PlayService : Service() {
     private lateinit var workerBigPlaylist: WorkerBigPlaylist
     private lateinit var bpfBinding: FragmentBigPlaylistBinding
     private lateinit var fragment: BigPlaylistFragment
+    private var isException = false
 
     inner class LocalBinder : Binder() {
         fun getService(): PlayService = this@PlayService
@@ -67,10 +68,17 @@ class PlayService : Service() {
             connectSong(first)
         }
         mediaPlayer.setOnCompletionListener {
-            bpfBinding.buttonPlay.setImageResource(R.drawable.baseline_play_arrow_24)
-            bigList.value = bigList.value?.let { it1 -> workerBigPlaylist.movingFirstToEnd(it1) }
-            connectSong(bigList.value!!.first())
-
+            if (!isException) {
+                bpfBinding.buttonPlay.visibility = View.GONE
+                bpfBinding.progressBar.visibility = View.VISIBLE
+                bpfBinding.buttonPlay.setImageResource(R.drawable.baseline_play_arrow_24)
+                bigList.value =
+                    bigList.value?.let { it1 -> workerBigPlaylist.movingFirstToEnd(it1) }
+                connectSong(bigList.value!!.first())
+            } else {
+                Log.d(TAG, "playing: isException $isException")
+                isException = false
+            }
         }
 
         mediaPlayer.setOnPreparedListener {
@@ -136,6 +144,7 @@ class PlayService : Service() {
             Log.d(TAG, "playVideo: currentDate ${dateFormat.format(newIdAndTime.lastListening)}")
 
         } catch (e: Exception) {
+            isException = true
             nextVideo()
             e.printStackTrace()
         }

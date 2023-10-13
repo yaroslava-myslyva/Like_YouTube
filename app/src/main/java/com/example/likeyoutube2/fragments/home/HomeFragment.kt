@@ -66,12 +66,15 @@ class HomeFragment : Fragment() {
 
         mainActivity.activityMainBinding.userName.text = firstName
         MainScope().launch(Dispatchers.Main) {
-            Glide.with(mainActivity)
-                .load(urlPicture)
-                .circleCrop()
-                .transition(DrawableTransitionOptions.withCrossFade(1500))
-                .into(mainActivity.activityMainBinding.userProfileImage)
-
+            if (urlPicture != null){
+                Glide.with(mainActivity)
+                    .load(urlPicture)
+                    .circleCrop()
+                    .transition(DrawableTransitionOptions.withCrossFade(1500))
+                    .into(mainActivity.activityMainBinding.userProfileImage)
+            } else{
+                mainActivity.activityMainBinding.userProfileImage.setImageResource(R.drawable.ic_baseline_account_circle_24)
+            }
         }
 
 
